@@ -13,3 +13,5 @@ Pipeline skills: `implementer`, `reviewer`, `research-project-agents`.
 `architecture-brainstorm` is a user-invoked skill for software engineering architecture brainstorming (first principles and current research). Not a pipeline role.
 
 `tests/` is gone. Tests are allowed when they earn their keep; they are not required. Tester is optional. Planner, implementer, and reviewer stay required.
+
+Orchestrator picks a model per spawned job from the current chat session; cloning this chat onto every role is the failure mode.

@@ -14,7 +14,7 @@ To brainstorm software engineering architecture, name or invoke [`architecture-b
 
 ## Docs
 
-- [AGENTS.md](AGENTS.md) — Orchestrator rules: allowed models, orchestrator is not the implementer, default pipeline, improvement loop, and report-back.
+- [AGENTS.md](AGENTS.md) — Orchestrator rules: choose a model per job, orchestrator is not the implementer, default pipeline, improvement loop, and report-back.
 - [STANDARDS.md](STANDARDS.md) — Elegance, clear code, secrets, errors/logs/audit, changelog/docs, when to test, and review gates.
 - [CHANGELOG.md](CHANGELOG.md) — Project changelog.
 
