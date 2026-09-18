@@ -2,6 +2,8 @@
 
 ## 2026-09-18
 
+Renamed to Levi's engineering harness (`levis-engineering-harness`).
+
 New docs and Agent Skills harness — not an application.
 
 Pipeline skills: `implementer`, `reviewer`, `research-project-agents`.

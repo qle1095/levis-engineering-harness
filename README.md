@@ -1,6 +1,6 @@
-# levis-harness
+# levis-engineering-harness
 
-**Levi's harness** is docs and Agent Skills only, **not an application**. It guides coding agents. Open this working space in **Cursor or Codex**.
+**Levi's engineering harness** is docs and Agent Skills only, **not an application**. It guides coding agents. Open this working space in **Cursor or Codex**.
 
 ## How it is used
 
