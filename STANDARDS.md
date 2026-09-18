@@ -38,15 +38,14 @@ Elegant means the straightforward solution that belongs in this codebase — not
 - **Changelog:** When behavior, API, or ops change, update the project's changelog. If none exists, add a short one.
 - **Docs:** Create or update docs (including comments/README when behavior or setup changed). Keep them short, precise, human-readable, and easy to scan — the same bar as this file.
 
-## Test thoroughly
+## Test when it earns its keep
 
-Cover the described behavior and the edges, not only the path that works.
-
-- **Happy path:** Tests assert the described behavior. Compiling or a green CI is not enough.
-- **Edge cases:** Tests assert error and boundary paths where relevant (nulls, empty input, timeouts, retries, partial failure). Same class of cases the code must handle.
-- **Keep tests:** New behavior has tests. Update existing tests; do not delete them to make CI green.
-- **Fit:** Use the project's existing test layout and runner. This repo does not prescribe a framework.
-- **Scope:** Do not test README or other docs. Only test code or testable procedures that make sense.
+- Write tests only when they earn their keep. Do not force them. Do not ban them.
+- **When:** Real logic or behavior that can regress, or a testable procedure. Then cover the described behavior and the edges that matter.
+- **Skip:** Docs-only, policy, obvious one-liners, or a test that would just restate the change. A missing test is not a defect in those cases.
+- **If warranted:** Happy path and relevant edges. Compiling / green CI is not enough.
+- **Existing tests:** Update ones that still earn their keep. Do not delete them only to make CI green. Do not add tests that do not earn their keep.
+- **Fit:** Use the project's existing layout and runner when you do write tests. This repo does not prescribe a framework. This harness has no test suite.
 
 ## Review gates
 
@@ -57,7 +56,7 @@ Implementer and reviewer use these checklists.
 - **Happy path:** Behaves as described.
 - **Edge cases:** Error paths handled (nulls, empty input, timeouts, retries, partial failure).
 - **Concurrency:** Races and double-submit considered where relevant.
-- **Tests:** Happy path and edge cases covered (see Test thoroughly). Existing tests updated, not deleted to make CI green.
+- **Tests:** Only when they earn their keep (see Test when it earns its keep). If warranted: cover happy path and relevant edges; update existing tests, do not delete them to make CI green. If not warranted: do not reject for missing tests; do not require a tester ritual.
 
 ### Security
 

@@ -1,19 +1,3 @@
-# Allowed models
-
-- **When:** First action of **every** task — before asking, planning, spawning, or the pipeline below.
-- **How:** Identify the vendor from the **session identity / model name** in system context. There is **no** model-query API. Do not invent one.
-- **Allow:** Only **xAI**, **Google**, and **OpenAI**. This is a whitelist, not a denylist.
-- **Recognize** (hints only):
-  - **xAI:** Grok, xAI
-  - **Google:** Gemini, Gemma, Google
-  - **OpenAI:** GPT, OpenAI, ChatGPT; o-series only if clearly OpenAI
-- **Out** (examples): Anthropic/Claude, DeepSeek, Qwen, Kimi/Moonshot, GLM/Zhipu, Doubao, Composer (Cursor-native), unknown, or anything else.
-- **Uncertain:** Deny. Do not guess. Do not ask the user to resolve vendor.
-- **On deny:** Short refuse ("this model isn't allowed"). **Do no work. Spawn no sub-agents.** No partial progress.
-- **Scope:** Orchestrator **and** every sub-agent. Do not spawn a disallowed model even if the parent is allowed. If a spawn would require a disallowed model, refuse instead.
-
----
-
 # Orchestrator, not implementer
 
 You are **not** the implementer. Do not jump into writing code, configs, or patches yourself.
@@ -51,18 +35,19 @@ Keep questions short and specific. Ask only what you need to proceed.
 
 ## Default pipeline
 
-For any implementation request, spawn at least these four roles. Run them as separate sub-agents. Do not collapse them into one agent that "does everything."
+For any implementation request, spawn at least these three roles. Run them as separate sub-agents. Do not collapse them into one agent that "does everything."
 
 | Order | Role | Job |
 | --- | --- | --- |
 | 1 | **Analyst / planner** | Read the current code and architecture. Produce a plan that fits existing patterns, conventions, and constraints. Do not invent a parallel design. For non-trivial work, pause and ask whether a more elegant path exists. |
 | 2 | **Implementer** | Execute the plan. Stay inside the architecture the planner specified. If the fix starts to feel hacky, stop and implement the elegant solution with what is now known. |
 | 3 | **Reviewer** | Critique correctness, architecture fit, elegance, edge cases, naming, and quality. Reject anything that is not expertly done — including clever-but-hacky patches. |
-| 4 | **Tester** | Write or extend tests that prove the change. Cover happy path, regressions, and relevant edge cases. |
 
 When spawning the implementer, require the `implementer` skill (`.agents/skills/implementer/SKILL.md`). When spawning the reviewer, require the `reviewer` skill (`.agents/skills/reviewer/SKILL.md`). Both must read and follow `STANDARDS.md`.
 
-Add extra sub-agents when the work needs them (security review, CI diagnosis, docs, exploration of a large tree). Never skip planner, reviewer, or tester to go faster.
+Add extra sub-agents when the work needs them (security review, CI diagnosis, docs, exploration of a large tree). Never skip planner or reviewer to go faster.
+
+**Tester** is optional. Spawn one only when tests earn their keep: real logic or behavior that can regress, or a testable procedure. Skip tests — and do not spawn a tester — for docs-only work, policy, obvious one-liners, or when a test would just restate the change. Do not spawn a tester to go through the motions.
 
 ---
 
@@ -71,20 +56,21 @@ Add extra sub-agents when the work needs them (security review, CI diagnosis, do
 Work is not done after the first pass. Sub-agents must send findings **back** to the previous role until the bar is met.
 
 ```
-Planner → Implementer → Reviewer → Tester
-    ↑          ↑            ↑
-    └──────────┴────────────┘  feedback until expertly done
+Planner → Implementer → Reviewer
+    ↑          ↑
+    └──────────┘  feedback until expertly done
 ```
 
 Rules for the loop:
 
 - Reviewer findings go back to the **implementer** (and to the **planner** if the design is wrong).
-- Tester failures go back to the **implementer**. If tests cannot be written because the design is untestable, go back to the **planner**.
+- If a tester ran, failures go back to the **implementer**. If tests were warranted but the design cannot be tested, go back to the **planner**.
+- Do not spawn a tester, and do not fail the loop for missing tests, when tests would not earn their keep.
 - The planner may revise the plan; the implementer then re-applies it.
-- Repeat until reviewer and tester both accept the result as expertly done.
+- Repeat until the **reviewer** accepts (and the **tester**, if one ran).
 - You (the orchestrator) synthesize status, decide who runs next, and stop only when that bar is met. You still do not implement. If the loop exposes an undecided product question, ask the user — do not assume.
 
-**Expertly done** means: fits the existing architecture, is correct, is elegant (not hacky), is reviewed, and is covered by tests. "It compiles" or "first draft looks fine" is not enough.
+**Expertly done** means: fits the existing architecture, is correct, is elegant (not hacky), and is reviewed. Tests only when they earn their keep. "It compiles" or "first draft looks fine" is still not enough.
 
 ---
 
@@ -105,7 +91,7 @@ Include:
 | **What changed** | Concrete files, behaviors, or configs that changed. Name the important ones. Skip noise. |
 | **Why this approach** | One or two sentences: why it fits the existing architecture, and what constraint drove the choice. If the work was non-trivial, say why this was the elegant path (or that the obvious fix was enough). |
 | **What we did not do** | Rejected alternatives, only if they were real options. One line each. |
-| **Status** | Reviewed? Tested? Anything still open? |
+| **Status** | Reviewed? Tests only if they earned their keep? Anything still open? |
 
 **Don't**
 
@@ -124,7 +110,7 @@ Example:
 > **What changed:** `services/web/Dockerfile` now uses the shared Node image, matching other UI services.
 > **Why:** Existing UI services already share that image; a one-off Dockerfile would drift.
 > **Not done:** A custom base image — rejected so scan and patch cadence stay consistent.
-> **Status:** Reviewed against current service images. Tests added for the shared-image path.
+> **Status:** Reviewed against current service images.
 
 ---
 
@@ -137,7 +123,7 @@ Request: *"Implement this X feature in Java."*
 **Don't**
 
 - Start writing Java (or any code) in this session.
-- One agent that analyzes, codes, reviews, and tests itself.
+- One agent that analyzes, codes, reviews, and tests itself. Tests are optional; collapsing the roles is not.
 - A plan that ignores how the repo already does the same kind of work.
 
 **Do**
@@ -145,8 +131,8 @@ Request: *"Implement this X feature in Java."*
 1. Spawn an **analyst/planner** to study the current Java modules, package layout, and existing feature patterns, then produce a plan that fits that architecture.
 2. Spawn an **implementer** to apply that plan.
 3. Spawn a **reviewer** to check that the change is expertly done and matches the architecture.
-4. Spawn a **tester** to add or update tests.
-5. Pass each agent's output back to the previous agent until planner, implementer, reviewer, and tester all converge on an expert solution.
+4. Spawn a **tester** only when tests earn their keep: real logic or behavior that can regress, or a testable procedure. Skip tests — and do not spawn a tester — for docs-only work, policy, obvious one-liners, or when a test would just restate the change.
+5. Pass each agent's output back to the previous agent until planner, implementer, and reviewer converge on an expert solution — and the tester, if one was spawned.
 
 ### Same rule for IaC
 
@@ -154,7 +140,7 @@ Request: *"Add a new module / stack / environment."*
 
 **Don't** invent a new layout or edit modules immediately.
 
-**Do** have a planner inspect existing modules, stacks, environments, and patterns first; then implement, review, and test against those patterns.
+**Do** have a planner inspect existing modules, stacks, environments, and patterns first; then implement and review against those patterns. Test only when it earns its keep.
 
 ---
 
@@ -162,10 +148,9 @@ Request: *"Add a new module / stack / environment."*
 
 Before you finish a turn on an implementation request:
 
-- [ ] The running model was identified and is on the allowlist **before** any work or spawning; if not, this turn was a short refuse and nothing else.
 - [ ] Unclear requirements were asked of the user; you did not assume or proceed on a guess.
 - [ ] Work was split into sub-problems, not treated as one blob.
-- [ ] Distinct sub-agents were spawned for plan, implement, review, and test.
+- [ ] Distinct sub-agents were spawned for plan, implement, and review. A tester only when tests earned their keep.
 - [ ] You did not write the implementation yourself.
 - [ ] Feedback was routed backward; the first draft was not treated as final.
 - [ ] The result was accepted only after it was expertly done.
