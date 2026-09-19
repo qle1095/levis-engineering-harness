@@ -44,7 +44,7 @@ Prefer merge over wipe: keep guidance that still matches the tree.
 
 Drop leftover `## Domain` and `## Self-Improvement Loop for each project` headings if present.
 
-Not a README clone. Do not copy this harness’s orchestrator AGENTS.md unless that directory actually uses this pipeline.
+Not a README clone. Do not copy this harness’s pipeline from the `orchestrator` skill (where the loop lives) unless that directory actually uses this pipeline.
 
 ## Output template
 

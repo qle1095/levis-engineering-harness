@@ -1,6 +1,6 @@
 ---
 name: implementer
-description: Executes the planner's implementation plan for this repo while staying inside the specified architecture. Requires reading and following STANDARDS.md. Use when spawned as the implementer, applying a plan, writing or changing code, or replacing a hacky fix with the elegant solution.
+description: Executes the planner's implementation plan for this repo while staying inside the specified architecture. Requires reading and following STANDARDS.md. Use when spawned as the implementer in the orchestrator pipeline, applying a plan, writing or changing code, or replacing a hacky fix with the elegant solution.
 disable-model-invocation: true
 ---
 

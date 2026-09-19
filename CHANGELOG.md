@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-09-19
+
+The planner / implementer / reviewer loop is a user-invoked `orchestrator` skill. `AGENTS.md` is the pointer. `run-record` still owns the look. The orchestrator skill owns when/where.
+
+Orchestrator keeps one run record per implementation request at `docs/runs/YYYY-MM-DD-short-name.md`.
+
+File is created as header + Intent + Turn 1 on first role return. Later returns append. Prior turns are not rewritten.
+
+Orchestrator writes it; sub-agents do not.
+
+Chat report-back stays.
+
+`docs/runs/` is gitignored. Run records stay local.
+
+Run records are tables (one idea per row). New pipeline skill `run-record` owns that scan format. Orchestrator reads it before writing.
+
 ## 2026-09-18
 
 Renamed to Levi's engineering harness (`levis-engineering-harness`).
