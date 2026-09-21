@@ -4,9 +4,25 @@ Elegance is part of the bar, but do not over-engineer.
 
 - **Non-trivial changes:** Pause (planner and reviewer) and ask: *is there a more elegant way?* Prefer the design that matches existing architecture with less special-casing, fewer branches, and a clearer name.
 - **Hacky fixes:** If a patch works but feels like a workaround, send it back to the implementer with: *knowing everything we know now, implement the elegant solution.* Do not ship the hack.
+- **Overbuilt:** If the change is far larger than the problem, rewrite it smaller. Do not leave a 200-line patch when 50 would do.
 - **Simple, obvious fixes:** Skip this. A one-line correction, a typo, or a clear follow-the-pattern change does not need an elegance debate.
 
 Elegant means the straightforward solution that belongs in this codebase — not a new abstraction, extra layer, or speculative flexibility.
+
+## Don't pick silently
+
+If the request or plan has two plausible readings, stop and name them. Do not pick one to keep moving.
+
+## Surgical changes
+
+Touch only what the request needs. Clean up only the mess this change created.
+
+- **Scope:** Every changed line traces to the request or plan. No extra features.
+- **Adjacent code:** Do not "improve" nearby comments, formatting, or names. Do not refactor what is not broken.
+- **Your orphans:** Remove imports, variables, and functions this change made unused.
+- **Pre-existing dead code:** Mention it. Do not delete it unless asked.
+
+Match existing style, even if you would write it differently.
 
 ## Write clear code
 
@@ -23,7 +39,7 @@ Elegant means the straightforward solution that belongs in this codebase — not
 
 ## Log and handle errors
 
-- **Errors:** Handle failures explicitly (nulls, empty input, timeouts, retries, partial failure where relevant). Do not swallow errors. Do not leak secrets or PII in error payloads (see No secrets).
+- **Errors:** Handle failures that can actually happen (nulls, empty input, timeouts, retries, partial failure where relevant). Do not swallow errors. Do not invent handlers for impossible cases. Do not leak secrets or PII in error payloads (see No secrets).
 - **Logs:** Meaningful, useful, not noisy. Use a **structured** log (key/value fields).
 - **Audit fields:** Every audit record includes:
   - **What** type of event occurred
@@ -54,7 +70,7 @@ Implementer and reviewer use these checklists.
 ### Correctness
 
 - **Happy path:** Behaves as described.
-- **Edge cases:** Error paths handled (nulls, empty input, timeouts, retries, partial failure).
+- **Edge cases:** Real error paths handled (nulls, empty input, timeouts, retries, partial failure where they can happen). Do not invent handlers for impossible cases.
 - **Concurrency:** Races and double-submit considered where relevant.
 - **Tests:** Only when they earn their keep (see Test when it earns its keep). If warranted: cover happy path and relevant edges; update existing tests, do not delete them to make CI green. If not warranted: do not reject for missing tests; do not require a tester ritual.
 
@@ -75,5 +91,6 @@ Implementer and reviewer use these checklists.
 ### Maintainability
 
 - **Fit:** Names and structure match the surrounding code.
-- **Cleanup:** No leftover debug code, TODOs without a ticket, or dead code.
+- **Surgical:** No drive-by formatting, drive-by refactors, or deletes of unrelated dead code. Remove what this change orphaned.
+- **Cleanup:** No leftover debug code or TODOs without a ticket.
 - **Docs:** Docs, README, or comments updated when behavior or setup changed.

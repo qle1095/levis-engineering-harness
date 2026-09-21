@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-21
+
+STANDARDS now require surgical edits: change only what the request needs, remove only orphans this change created, and mention pre-existing dead code instead of deleting it.
+
+Reviewer rejects drive-by formatting, drive-by refactors, and unrelated deletes.
+
+Error handling is for failures that can happen, not invented cases. An overbuilt patch gets rewritten smaller. Implementer stops and names a fork instead of picking silently.
+
 ## 2026-09-19
 
 The planner / implementer / reviewer loop is a user-invoked `orchestrator` skill. `AGENTS.md` is the pointer. `run-record` still owns the look. The orchestrator skill owns when/where.

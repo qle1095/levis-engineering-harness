@@ -15,7 +15,7 @@ To brainstorm software engineering architecture, name or invoke [`architecture-b
 ## Docs
 
 - [AGENTS.md](AGENTS.md) — Docs/skills harness; name or invoke orchestrator.
-- [STANDARDS.md](STANDARDS.md) — Elegance, clear code, secrets, errors/logs/audit, changelog/docs, when to test, and review gates.
+- [STANDARDS.md](STANDARDS.md) — Elegance, surgical changes, clear code, secrets, errors/logs/audit, changelog/docs, when to test, and review gates.
 - [CHANGELOG.md](CHANGELOG.md) — Project changelog.
 
 ## Skills
