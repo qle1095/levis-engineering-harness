@@ -2,6 +2,14 @@
 
 ## 2026-09-21
 
+The pipeline is two skills. `orchestrator-e2e` runs planner, implementer, and reviewer through to the end. `orchestrator-learning` stops after each phase, explains it, and waits before the next. `orchestrator-e2e` still owns the shared pipeline rules.
+
+`explain-to-levi` is now a skill in this harness (`.agents/skills/explain-to-levi/`). It is the same skill as the home copy: how to explain so it clicks, and how to update itself when it does not.
+
+`orchestrator-learning` explains each phase with `explain-to-levi`. It writes a run record only when that phase tables cleanly.
+
+`explain-to-levi` no longer keeps a list of past misses. When an explanation does not click, the agent reasons from first principles about what would help Levi understand this, or what he is looking for, then explains again. A new sentence is added to the skill only when that reasoning produces a principle that would apply to any topic.
+
 STANDARDS now require surgical edits: change only what the request needs, remove only orphans this change created, and mention pre-existing dead code instead of deleting it.
 
 Reviewer rejects drive-by formatting, drive-by refactors, and unrelated deletes.

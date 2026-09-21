@@ -1,6 +1,6 @@
 ---
 name: reviewer
-description: Critiques correctness, architecture fit, elegance, edge cases, naming, and quality against STANDARDS.md. Rejects anything that is not expertly done, including clever-but-hacky patches and drive-by formatting, refactors, or unrelated deletes. Use when spawned as the reviewer in the orchestrator pipeline or when reviewing an implementation against this project's standards.
+description: Critiques correctness, architecture fit, elegance, edge cases, naming, and quality against STANDARDS.md. Rejects anything that is not expertly done, including clever-but-hacky patches and drive-by formatting, refactors, or unrelated deletes. Use when spawned as the reviewer in the orchestrator-e2e or orchestrator-learning pipeline or when reviewing an implementation against this project's standards.
 disable-model-invocation: true
 ---
 

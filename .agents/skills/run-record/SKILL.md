@@ -1,6 +1,6 @@
 ---
 name: run-record
-description: Owns the scan format for pipeline run records at docs/runs/: tables, short cells, one idea per row. Keeps human-readability and ease to scan through it a priority. Use when the orchestrator writes or appends a run record after a spawned role returns. Do not use when implementing product work or when spawned as implementer or reviewer.
+description: Owns the scan format for pipeline run records at docs/runs/: tables, short cells, one idea per row. Keeps human-readability and ease to scan through it a priority. Use when orchestrator-e2e or orchestrator-learning writes or appends a run record after a spawned role returns. Do not use when implementing product work or when spawned as implementer or reviewer.
 disable-model-invocation: true
 ---
 
@@ -122,4 +122,4 @@ User lock: `## Turn N — User lock`, rows of **Locked**.
 | **Why** | Reviewer asked for rules, not edit history, and one statement of each constraint |
 ```
 
-Orchestrator skill owns when/where/who-writes/append-only/spawn-return. Do not copy those process rules here. Look templates stay.
+`orchestrator-e2e` owns when/where/who-writes/append-only/spawn-return. Do not copy those process rules here. Look templates stay.

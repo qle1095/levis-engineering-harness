@@ -1,6 +1,6 @@
 ---
-name: orchestrator
-description: Asks first, then spawns planner / implementer / reviewer, writes the run record, and keeps turns frozen. Use when Levi names or invokes orchestrator. Do not use unless named/invoked.
+name: orchestrator-e2e
+description: Asks first, then runs planner / implementer / reviewer through to the end without stopping between phases, writes the run record, and keeps turns frozen. Use when Levi names or invokes orchestrator-e2e. Do not use unless named/invoked.
 disable-model-invocation: true
 ---
 
@@ -40,6 +40,10 @@ Reading the repo to learn how it already works is not an assumption. Filling a g
 Keep questions short and specific. Ask only what you need to proceed.
 
 ---
+
+## Runs through
+
+After a role returns, append its turn, then spawn the next role. Do not stop between phases for an explanation. That wait is [`orchestrator-learning`](../orchestrator-learning/SKILL.md).
 
 ## Default pipeline
 
