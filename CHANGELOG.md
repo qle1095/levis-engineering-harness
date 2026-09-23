@@ -2,6 +2,8 @@
 
 ## 2026-09-23
 
+`software-factory` is a user-invoked skill. init interviews and writes layer AGENTS.md; crawl writes AGENTS.md from the tree; improve researches with type-specific experts; explain crawls then explains with explain-to-levi. It does not implement the product.
+
 STANDARDS now require three checks. A test that would still pass if every function it calls returned no result observes nothing: rewrite it or delete it. When a feature path exists, run it before accept, and the reviewer reads the diff. When two actors might write the same file, key, or record, give each its own unless one shared writer is required.
 
 One more branch in an existing chain, or a second flag that must stay in sync with the first, is a reason to pause for elegance.

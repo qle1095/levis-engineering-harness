@@ -12,6 +12,8 @@ To orient later coding agents on another tree, name a target directory and use [
 
 To brainstorm software engineering architecture, name or invoke [`architecture-brainstorm`](.agents/skills/architecture-brainstorm/SKILL.md). That is a conversation with an expert engineer, not a pipeline role and not a build.
 
+Name or invoke [`software-factory`](.agents/skills/software-factory/SKILL.md) to build or refresh a factory of `AGENTS.md` files on a named target. Not this harness unless they asked about the harness. Not a product build; implementation is orchestrator-e2e when they say yes.
+
 When explaining anything to Levi, follow [`explain-to-levi`](.agents/skills/explain-to-levi/SKILL.md). That skill loads for explanation, not only when he names it.
 
 ## Docs
@@ -40,3 +42,4 @@ Skills live under `.agents/skills/`. Cursor, Codex, and other Agent Skills–com
 - [`orchestrator-e2e`](.agents/skills/orchestrator-e2e/SKILL.md) — on-demand pipeline (planner / implementer / reviewer) that runs through. Not every chat.
 - [`orchestrator-learning`](.agents/skills/orchestrator-learning/SKILL.md) — same pipeline, but stops after each phase, explains it with explain-to-levi, writes a run record when that phase tables cleanly, and waits. Not every chat.
 - [`architecture-brainstorm`](.agents/skills/architecture-brainstorm/SKILL.md) — software engineering architecture brainstorming: expert engineer in the room, first principles, current research, pushback, tradeoffs. Not a build.
+- [`software-factory`](.agents/skills/software-factory/SKILL.md) — builds a factory of AGENTS.md files so later coding agents can read them, build, and improve. Not a product build. Commands: init, crawl, improve, explain.
