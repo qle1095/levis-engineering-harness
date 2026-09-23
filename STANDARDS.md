@@ -2,7 +2,7 @@
 
 Elegance is part of the bar, but do not over-engineer.
 
-- **Non-trivial changes:** Pause (planner and reviewer) and ask: *is there a more elegant way?* Prefer the design that matches existing architecture with less special-casing, fewer branches, and a clearer name.
+- **Non-trivial changes:** Pause (planner and reviewer) and ask: *is there a more elegant way?* Prefer the design that matches existing architecture with less special-casing, fewer branches, and a clearer name. One more branch in an existing chain, or a second flag that must stay in sync with the first, is a reason to pause. A short, clear branch that already fits is not.
 - **Hacky fixes:** If a patch works but feels like a workaround, send it back to the implementer with: *knowing everything we know now, implement the elegant solution.* Do not ship the hack.
 - **Overbuilt:** If the change is far larger than the problem, rewrite it smaller. Do not leave a 200-line patch when 50 would do.
 - **Simple, obvious fixes:** Skip this. A one-line correction, a typo, or a clear follow-the-pattern change does not need an elegance debate.
@@ -60,6 +60,7 @@ Match existing style, even if you would write it differently.
 - **When:** Real logic or behavior that can regress, or a testable procedure. Then cover the described behavior and the edges that matter.
 - **Skip:** Docs-only, policy, obvious one-liners, or a test that would just restate the change. A missing test is not a defect in those cases.
 - **If warranted:** Happy path and relevant edges. Compiling / green CI is not enough.
+- **Observes behavior:** A test that would still pass if every function it calls returned no result observes nothing. Rewrite it to assert a real output, or delete it.
 - **Existing tests:** Update ones that still earn their keep. Do not delete them only to make CI green. Do not add tests that do not earn their keep.
 - **Fit:** Use the project's existing layout and runner when you do write tests. This repo does not prescribe a framework. This harness has no test suite.
 
@@ -70,8 +71,9 @@ Implementer and reviewer use these checklists.
 ### Correctness
 
 - **Happy path:** Behaves as described.
+- **Proof:** When a feature path exists, run it before accept. The reviewer reads the diff. The implementer's summary is not the proof. Docs, policy, and obvious one-liners are proved by reading the change.
 - **Edge cases:** Real error paths handled (nulls, empty input, timeouts, retries, partial failure where they can happen). Do not invent handlers for impossible cases.
-- **Concurrency:** Races and double-submit considered where relevant.
+- **Concurrency:** Races and double-submit considered where relevant. When two actors might write the same file, key, or record, give each its own unless one shared writer is required.
 - **Tests:** Only when they earn their keep (see Test when it earns its keep). If warranted: cover happy path and relevant edges; update existing tests, do not delete them to make CI green. If not warranted: do not reject for missing tests; do not require a tester ritual.
 
 ### Security

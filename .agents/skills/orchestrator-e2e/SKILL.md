@@ -83,6 +83,7 @@ Planner → Implementer → Reviewer
 Rules for the loop:
 
 - Reviewer findings go back to the **implementer** (and to the **planner** if the design is wrong).
+- When two fixes fail on the same assumption, write that assumption down before a third fix. If the assumption is the design, send it back to the **planner**.
 - If a tester ran, failures go back to the **implementer**. If tests were warranted but the design cannot be tested, go back to the **planner**.
 - Do not spawn a tester, and do not fail the loop for missing tests, when tests would not earn their keep.
 - The planner may revise the plan; the implementer then re-applies it.
