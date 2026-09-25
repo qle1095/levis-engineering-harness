@@ -35,11 +35,12 @@ Match existing style, even if you would write it differently.
 
 - **Secrets:** No secrets, tokens, certs, or credentials in code, diffs, docs, logs, or error payloads.
 - **Config:** Put secrets in config or environment variables. Never commit them.
+- **Redaction:** A redacting print method is not redaction. Any formatter, serializer, or debugger that reaches the field prints the raw value. Keep the secret out of the value itself — a wrapper whose only exposure is an accessor — or account for every path that can print it.
 - **Identity:** Log **stable identifiers** (user id, subject id, resource id), not secrets or **PII**.
 
 ## Log and handle errors
 
-- **Errors:** Handle failures that can actually happen (nulls, empty input, timeouts, retries, partial failure where relevant). Do not swallow errors. Do not invent handlers for impossible cases. Do not leak secrets or PII in error payloads (see No secrets).
+- **Errors:** Handle failures that can actually happen (nulls, empty input, timeouts, retries, partial failure where relevant). Do not swallow errors. Do not invent handlers for impossible cases. Do not leak secrets or PII in error payloads (see No secrets). Name the rule that failed. Do not report a later check that happens to reject the same value.
 - **Logs:** Meaningful, useful, not noisy. Use a **structured** log (key/value fields).
 - **Audit fields:** Every audit record includes:
   - **What** type of event occurred
@@ -60,7 +61,7 @@ Match existing style, even if you would write it differently.
 - **When:** Real logic or behavior that can regress, or a testable procedure. Then cover the described behavior and the edges that matter.
 - **Skip:** Docs-only, policy, obvious one-liners, or a test that would just restate the change. A missing test is not a defect in those cases.
 - **If warranted:** Happy path and relevant edges. Compiling / green CI is not enough.
-- **Observes behavior:** A test that would still pass if every function it calls returned no result observes nothing. Rewrite it to assert a real output, or delete it.
+- **Observes behavior:** A test that would still pass if every function it calls returned no result observes nothing. Asserting that a call returns empty, zero, or nil only proves the call is allowed — when the requirement is that it must be impossible or must fail, assert that instead. Rewrite it to assert a real output, or delete it.
 - **Existing tests:** Update ones that still earn their keep. Do not delete them only to make CI green. Do not add tests that do not earn their keep.
 - **Fit:** Use the project's existing layout and runner when you do write tests. This repo does not prescribe a framework. This harness has no test suite.
 
@@ -73,6 +74,7 @@ Implementer and reviewer use these checklists.
 - **Happy path:** Behaves as described.
 - **Proof:** When a feature path exists, run it before accept. The reviewer reads the diff. The implementer's summary is not the proof. Docs, policy, and obvious one-liners are proved by reading the change.
 - **Edge cases:** Real error paths handled (nulls, empty input, timeouts, retries, partial failure where they can happen). Do not invent handlers for impossible cases.
+- **Precedence:** When one input source overrides another, validate the merged result, not each source as it is read. A conversion that can fail counts as validation. Rejecting a value from a lower-precedence source makes the override that was meant to replace it unreachable.
 - **Concurrency:** Races and double-submit considered where relevant. When two actors might write the same file, key, or record, give each its own unless one shared writer is required.
 - **Tests:** Only when they earn their keep (see Test when it earns its keep). If warranted: cover happy path and relevant edges; update existing tests, do not delete them to make CI green. If not warranted: do not reject for missing tests; do not require a tester ritual.
 
@@ -85,7 +87,7 @@ Implementer and reviewer use these checklists.
 
 ### Operability
 
-- **Defaults:** Config and feature flags have safe defaults.
+- **Defaults:** Config and feature flags have safe defaults. Where a loader or constructor enforces a type's rules, the uninitialized value must not be usable as a loaded one. Misuse returns an error that says it was not loaded. It does not crash the process. A panic, including a nil dereference, is not that error.
 - **Observability:** Logs / metrics useful and not noisy; no PII.
 - **Migrations:** Data backfills reversible, or explicitly one-way with a rollback note.
 - **Resources:** CPU, memory, DB, and network usage reasonable for the hot path.

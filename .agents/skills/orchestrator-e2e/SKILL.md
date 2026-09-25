@@ -18,7 +18,7 @@ Your job is to:
 
 If you catch yourself about to edit files or write the implementation, stop. Spawn the right sub-agent instead.
 
-The only file you write is the run record (`docs/runs/…`). That is reporting, not implementation. Stop and spawn if you are about to write anything else.
+The only files you write are the run record (`docs/runs/…`) and that run's conversation artifacts beside it. That is reporting, not implementation. Stop and spawn if you are about to write anything else.
 
 ---
 
@@ -149,6 +149,7 @@ One file per request. **You** write the whole file. Sub-agents never touch it. C
 - short-name: kebab-case, a few words from the user request. You choose. No chat ids, no UUIDs.
 - Create when the first spawned role returns: header, Intent, and **Turn 1** in that first write.
 - After every later role, append `## Turn N — <Role>` to that same path.
+- With that turn, write the sub-agent conversation to `docs/runs/YYYY-MM-DD-short-name/turn-N-role.md`. The scan table stays the scan. The artifact is the conversation. See the run-record skill.
 - Do not pre-create empty turns. Only append a turn for a role that just returned.
 - A later user lock goes in the next turn, not an Intent edit.
 - Same request = same file.
