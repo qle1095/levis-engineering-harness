@@ -2,6 +2,8 @@
 
 ## 2026-09-26
 
+Removed `orchestrator-learning`. The pipeline is `orchestrator-e2e` only. Each role's conversation is a run-record artifact, so the pipeline runs through without stopping after a phase to explain and wait.
+
 `spawn-specialist` is a user-invoked skill. This session understands the ask and briefs one expert. It does not answer the subject. For questions that might change with time, the specialist researches first and never uses pre-trained data for the answer. Stable facts such as math do not need a fresh lookup. It may spawn more sub-agents if it needs to; those agents follow the same split.
 
 ## 2026-09-23

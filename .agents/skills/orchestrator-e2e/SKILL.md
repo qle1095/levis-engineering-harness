@@ -43,7 +43,7 @@ Keep questions short and specific. Ask only what you need to proceed.
 
 ## Runs through
 
-After a role returns, append its turn, then spawn the next role. Do not stop between phases for an explanation. That wait is [`orchestrator-learning`](../orchestrator-learning/SKILL.md).
+After a role returns, append its turn and write that role's conversation artifact, then spawn the next role. Do not stop between phases. The artifact is the conversation.
 
 ## Default pipeline
 
