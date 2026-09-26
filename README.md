@@ -14,6 +14,8 @@ To brainstorm software engineering architecture, name or invoke [`architecture-b
 
 Name or invoke [`software-factory`](.agents/skills/software-factory/SKILL.md) to build or refresh a factory of `AGENTS.md` files on a named target. Not this harness unless they asked about the harness. Not a product build; implementation is orchestrator-e2e when they say yes.
 
+Name or invoke [`spawn-specialist`](.agents/skills/spawn-specialist/SKILL.md) to hand the ask to one expert on that subject. This session briefs; it does not answer. For questions that might change with time, the specialist researches first and does not use pre-trained data for the answer. Stable facts such as math do not need a fresh lookup. It may spawn more sub-agents if it needs to. Those agents follow the same split.
+
 When explaining anything to Levi, follow [`explain-to-levi`](.agents/skills/explain-to-levi/SKILL.md). That skill loads for explanation, not only when he names it.
 
 ## Docs
@@ -43,3 +45,4 @@ Skills live under `.agents/skills/`. Cursor, Codex, and other Agent Skills–com
 - [`orchestrator-learning`](.agents/skills/orchestrator-learning/SKILL.md) — same pipeline, but stops after each phase, explains it with explain-to-levi, writes a run record when that phase tables cleanly, and waits. Not every chat.
 - [`architecture-brainstorm`](.agents/skills/architecture-brainstorm/SKILL.md) — software engineering architecture brainstorming: expert engineer in the room, first principles, current research, pushback, tradeoffs. Not a build.
 - [`software-factory`](.agents/skills/software-factory/SKILL.md) — builds a factory of AGENTS.md files so later coding agents can read them, build, and improve. Not a product build. Commands: init, crawl, improve, explain.
+- [`spawn-specialist`](.agents/skills/spawn-specialist/SKILL.md) — understands the ask, then spawns one expert on that subject with a full brief. For questions that might change with time, the specialist researches first and never uses pre-trained data for the answer. Stable facts such as math do not need a fresh lookup. It may spawn more sub-agents if it needs to.

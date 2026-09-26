@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-09-26
+
+`spawn-specialist` is a user-invoked skill. This session understands the ask and briefs one expert. It does not answer the subject. For questions that might change with time, the specialist researches first and never uses pre-trained data for the answer. Stable facts such as math do not need a fresh lookup. It may spawn more sub-agents if it needs to; those agents follow the same split.
+
 ## 2026-09-23
 
 `software-factory` is a user-invoked skill. init interviews and writes layer AGENTS.md; crawl writes AGENTS.md from the tree; improve researches with type-specific experts; explain crawls then explains with explain-to-levi. It does not implement the product.

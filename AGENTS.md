@@ -8,4 +8,6 @@ For a pipeline that stops after each phase and explains it with explain-to-levi 
 
 When explaining anything to Levi, follow [`explain-to-levi`](.agents/skills/explain-to-levi/SKILL.md).
 
+To hand a subject to an expert, name or invoke [`spawn-specialist`](.agents/skills/spawn-specialist/SKILL.md). It researches before answering when the answer might change with time.
+
 See [README.md](README.md), [STANDARDS.md](STANDARDS.md), and `.agents/skills/`.
