@@ -2,6 +2,8 @@
 
 ## 2026-10-02
 
+Updated `k-explain` to require a custom visual teaching artifact by default. Includes a bundled teaching-sheet reference for consistent presentation across conversations. Supplied examples define the teaching structure and visual style; short prompts no longer route to prose alone. Requires rendering, visual inspection, and interaction checks before delivering the usable result. Diagram arrows must follow actual data inputs; video verification must inspect encoded scene changes and narration timing. Explicit user format requests still take precedence.
+
 Added `k-explain`: an independent skill that chooses clear writing, diagrams, interactive HTML, or bespoke narrated video to make concepts and model outputs easier to understand. Includes relaxed ASD-STE100 writing and ElevenLabs or local narration options.
 
 ## 2026-10-01

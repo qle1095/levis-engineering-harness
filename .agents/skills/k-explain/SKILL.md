@@ -1,28 +1,33 @@
 ---
 name: k-explain
-description: Explain concepts and model outputs through clear writing, diagrams, interactive HTML, or bespoke explainer videos. Use when the user invokes k-explain or wants a visual, interactive, or animated explanation to make a concept easier to understand. Focus on teaching rather than general website or promotional video production.
+description: Build custom visual teaching artifacts for concepts and model outputs using annotated teaching sheets, interactive HTML, or bespoke explainer videos. Use when the user invokes k-explain or wants a visual, interactive, or animated explanation. Focus on teaching rather than general website or promotional video production.
 ---
 
 # k-explain
 
-Turn a concept into something the user can understand, inspect, and reason about. Base the approach on the Karpathy passage supplied by the user: controlled language, diagrams and images, interactive webpages, and bespoke explainer videos.
+Turn a concept into something the user can understand, inspect, and reason about. Base the approach on the [Karpathy passage](https://x.com/karpathy/status/2105819303471976479): controlled language, diagrams and images, interactive webpages, and bespoke explainer videos.
 
 Keep this skill self-contained and independent of other explanation skills. The choices below translate the passage into practical defaults.
 
-## Choose the medium for understanding
+## Required output: a custom visual teaching artifact
 
-As models do more work autonomously, the user needs to understand their outputs and oversee their decisions. Spend the model's effort on making the idea visible: what happens, why it happens, and what the user needs to judge.
+Every invocation must produce and present a custom visual teaching artifact, unless the user explicitly requests prose only or another format. A short topic or a simple distinction does not waive this requirement. Clear writing supports the artifact; it is not the default deliverable. A prose answer with a small Mermaid flowchart does not satisfy this skill.
 
-Honor the requested format and length. Otherwise, infer the learning need from the question and context, then choose and build the explanation. Ask only when missing information materially changes what to teach. Do not make the user select a format every time.
+Before building a visual artifact, inspect the [bundled teaching-sheet reference](assets/teaching-sheet-reference.png). It preserves the default presentation across conversations: a light engineering sheet with square sections, restrained color, close annotations, and useful visual density. Match its teaching quality and visual discipline; adapt the number of sections and the subject-specific diagrams rather than copying its content. An explicit user format or a new supplied example takes precedence.
 
-| What the user needs to grasp | Useful format |
+Use a supplied example as the output contract: inspect it and match its teaching structure, level of detail, and visual style while adapting the content to the new topic. Read supplied source links before attributing claims to them; use an accessible mirror when the original is blocked, and disclose that substitution. Do not claim to have read an inaccessible source.
+
+Without a supplied format, build an annotated teaching sheet: a coherent visual explanation with labeled sections, diagrams of the mechanism, a worked example, and comparisons or limits that help the user reason about the topic. Use disciplined spacing, readable type, and labels next to the objects they explain. Each section must teach something; adapt the arrangement and number of sections to the subject. Do not substitute a dashboard, decorative cards, or a generic chain of boxes for the explanation.
+
+Honor the user's requested format and length. Infer the learning need and build the artifact without making the user select a medium. Ask only when missing information materially changes what to teach.
+
+| What the user needs to grasp | Required artifact |
 | --- | --- |
-| A definition, distinction, or short causal explanation | Clear writing |
-| Parts, relationships, structure, or a process at a glance | Diagram or image |
-| How changing an input affects an outcome; comparisons and exploration | Interactive HTML |
-| An idea that becomes clear through a guided sequence, motion, and narration | Bespoke explainer video |
+| A definition, distinction, relationship, or structure | Annotated diagram or teaching sheet with a concrete example |
+| A process, changing state, or the effect of changing an input | Interactive HTML with a visual explanation and controls that expose the mechanism |
+| An idea best taught through a guided sequence, motion, and narration | Bespoke explainer video |
 
-Actively consider the richer formats. A short question can deserve a substantial custom artifact if that makes the answer click. The formats are options, not a required production sequence, and video is not automatically better for every topic.
+For interactive HTML, retain enough of the visual explanation to understand the topic at a glance. Let the user inspect a process with steps or change a meaningful input and see its effect. Put the cause and effect together; do not replace the teaching sheet with text inside a webpage. Video is an option, not a mandatory escalation from HTML.
 
 Custom software can be useful even if it is used once and discarded. Do not reject a helpful simulator, animation, or explainer because it would once have been too expensive to build. Optimize for the user's understanding, not the artifact's lifespan or decorative complexity.
 
@@ -43,11 +48,11 @@ For a request for strict ASD-STE100, consult the actual writing rules and contro
 
 ## Diagrams and images: make relationships visible
 
-Use a visual when it lets the user see something they would otherwise have to reconstruct from paragraphs.
+Make the required artifact show what happens and why. Use the worked example to connect the diagram to a result the user can predict or inspect.
 
 Choose a form that matches the idea: a flow for a process, a sequence for exchanges, a map for relationships, or a before-and-after image for a change. Keep labels close to what they describe, use consistent visual meanings, and reveal complex structures in useful stages.
 
-Use a precise diagram for exact relationships and an illustration when appearance or spatial intuition carries the lesson. Include a short explanation of what to notice. Check that arrows, labels, and grouping tell the same story as the text; beauty cannot repair a misleading model.
+Use a precise diagram for exact relationships and an illustration when appearance or spatial intuition carries the lesson. Include a short explanation of what to notice. For each arrow, identify what flows and verify that the destination actually consumes it. Separate operations with different inputs; do not route data through an unrelated computation for layout convenience. Check that labels and grouping agree with these routes; beauty cannot repair a misleading model.
 
 ## Interactive HTML: let the user try the idea
 
@@ -69,12 +74,12 @@ Plan narration and visuals together. Synchronize the spoken point with the objec
 
 For narration, use ElevenLabs when the user requests or authorizes it and credentials are available through a supported secret mechanism. Keep keys out of generated artifacts. Otherwise, research currently available free options that use local compute and choose one suited to the machine, setup effort, and voice quality. Do not assume an old tool recommendation is still suitable.
 
-Render and inspect the result, including narration timing and readability. Deliver a playable video when that is the requested output. If tooling prevents completion, state what is missing and accurately label any animation, storyboard, or script delivered as a partial result.
+Render the video and inspect the encoded media itself at multiple scene times. Verify that its frames change as planned, the narration matches the visible explanation, captions remain readable, and playback reaches the end. Source-animation screenshots, successful encoding, and valid media metadata do not prove the finished video teaches the sequence. Deliver a playable video when that is the requested output. If tooling prevents completion, state what is missing and accurately label any animation, storyboard, or script delivered as a partial result.
 
 ## Check whether the explanation works
 
-Use a concrete example when it helps expose the mechanism. Verify that the prose, visuals, controls, and narration agree. For explanations of model outputs, make key assumptions and the basis for consequential conclusions inspectable.
+Before delivery, render and inspect the artifact. Check readable labels, spacing, arrows, and grouping against the mechanism and worked example. Exercise implemented teaching controls and verify their displayed outcomes. For explanations of model outputs, make key assumptions and the basis for consequential conclusions inspectable.
 
 If the user remains confused, reconsider the representation: a relationship may need a diagram, a changing system may need a control, or a transformation may need motion. Be willing to build a new, disposable explanation instead of merely expanding the original prose.
 
-Deliver the explanation and only the orientation needed to use it. The result should let the user explain what happens, predict a relevant change, or assess the output they came to understand.
+Deliver the rendered artifact with only the orientation needed to use it. Show an image preview for a teaching sheet and provide the usable interactive page or playable video when built. Source code, a plan, a textual substitute, or an unrendered diagram is not completion. If a tool fails, try an available alternative; if completion remains blocked, preserve the work and clearly label the missing deliverable. Do not silently fall back to a normal chat explanation. The result must let the user explain what happens, predict a relevant change, or assess the output they came to understand.
