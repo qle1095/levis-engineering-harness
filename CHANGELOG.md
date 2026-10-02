@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-02
+
+Added `k-explain`: an independent skill that chooses clear writing, diagrams, interactive HTML, or bespoke narrated video to make concepts and model outputs easier to understand. Includes relaxed ASD-STE100 writing and ElevenLabs or local narration options.
+
 ## 2026-10-01
 
 Added `bible`: chooses specialists for the user's ask, gives each a folder of concise project memory, and tracks delivery through `/goal` with verified completion criteria.

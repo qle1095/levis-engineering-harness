@@ -29,6 +29,7 @@ When explaining anything to Levi, follow [`explain-to-levi`](.agents/skills/expl
 Skills live under `.agents/skills/`. Cursor, Codex, and other Agent Skills–compatible harnesses load them from this path.
 
 - [`bible`](.agents/skills/bible/SKILL.md) — creates the specialists needed for the ask, gives each concise project memory in its own folder, and uses `/goal` to deliver and verify the result.
+- [`k-explain`](.agents/skills/k-explain/SKILL.md) — an independent explanation skill inspired by the supplied Karpathy passage: clear writing, diagrams, interactive HTML, and bespoke narrated videos.
 
 **Pipeline-only** (`disable-model-invocation: true` — the agent/pipeline loads them; the user does **not** slash-invoke them):
 
