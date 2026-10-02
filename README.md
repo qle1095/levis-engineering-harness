@@ -28,6 +28,8 @@ When explaining anything to Levi, follow [`explain-to-levi`](.agents/skills/expl
 
 Skills live under `.agents/skills/`. Cursor, Codex, and other Agent Skills–compatible harnesses load them from this path.
 
+- [`bible`](.agents/skills/bible/SKILL.md) — creates the specialists needed for the ask, gives each concise project memory in its own folder, and uses `/goal` to deliver and verify the result.
+
 **Pipeline-only** (`disable-model-invocation: true` — the agent/pipeline loads them; the user does **not** slash-invoke them):
 
 - [`implementer`](.agents/skills/implementer/SKILL.md) — Used when spawned as the implementer in the orchestrator-e2e pipeline. Executes the plan; follows STANDARDS.md.

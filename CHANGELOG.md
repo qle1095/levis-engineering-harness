@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-01
+
+Added `bible`: chooses specialists for the user's ask, gives each a folder of concise project memory, and tracks delivery through `/goal` with verified completion criteria.
+
 ## 2026-09-26
 
 Removed `orchestrator-learning`. The pipeline is `orchestrator-e2e` only. Each role's conversation is a run-record artifact, so the pipeline runs through without stopping after a phase to explain and wait.
