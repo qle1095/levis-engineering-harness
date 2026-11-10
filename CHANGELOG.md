@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-10
+
+STANDARDS now require building a feature into the architecture, not bolting it on. If there is no natural way to build it and a refactor would be the clean path, stop before building and say so. The reviewer checks this under Maintainability.
+
 ## 2026-10-02
 
 Updated `k-explain` to require a custom visual teaching artifact by default. Includes a bundled teaching-sheet reference for consistent presentation across conversations. Supplied examples define the teaching structure and visual style; short prompts no longer route to prose alone. Requires rendering, visual inspection, and interaction checks before delivering the usable result. Diagram arrows must follow actual data inputs; video verification must inspect encoded scene changes and narration timing. Explicit user format requests still take precedence.

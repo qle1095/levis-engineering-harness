@@ -9,6 +9,13 @@ Elegance is part of the bar, but do not over-engineer.
 
 Elegant means the straightforward solution that belongs in this codebase — not a new abstraction, extra layer, or speculative flexibility.
 
+## Build it in, don't bolt it on
+
+Build cleanly and modularly, with proper architecture and separation of concerns. A request for a feature is not a reason to bolt it on.
+
+- **Natural fit:** The feature goes where the architecture already has a place for it. Each module keeps one concern.
+- **No natural fit:** If there is no easy way to build it naturally, and you would recommend a refactor to make the whole thing clean, stop before building and say so. Name the refactor and why. Do not bolt the feature on. Do not start the refactor unasked (see Surgical changes).
+
 ## Don't pick silently
 
 If the request or plan has two plausible readings, stop and name them. Do not pick one to keep moving.
@@ -95,6 +102,7 @@ Implementer and reviewer use these checklists.
 ### Maintainability
 
 - **Fit:** Names and structure match the surrounding code.
+- **Built in:** The feature sits where the architecture has a place for it, and concerns stay separated. Not bolted on. If it needed a refactor to fit, that was raised before building (see Build it in, don't bolt it on).
 - **Surgical:** No drive-by formatting, drive-by refactors, or deletes of unrelated dead code. Remove what this change orphaned.
 - **Cleanup:** No leftover debug code or TODOs without a ticket.
 - **Docs:** Docs, README, or comments updated when behavior or setup changed.
