@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-11-18
+
+`software-factory` is rebuilt. It no longer writes `AGENTS.md` files; init, crawl, improve, and explain are gone. A pasted task now runs through a line: intake, research, verification design, an implementer / gate / reviewer loop, and a TLDR report. The main chat is the orchestrator and spawns Opus sub-agents for all the work.
+
+Intake sorts the task. A standard task has a clear done and an existing pattern. A research task has a clear goal but no known best solution: a researcher looks it up instead of answering from training data, ranks the solutions, and Levi chooses. The researcher then writes the plan.
+
+A verifier decides the checks before any build, and writes `checks.sh` to run them. The implementer builds to them. A script, the gate, runs them: a failing build goes straight back to the implementer and no reviewer is spawned. The gate refuses to run if the plan or the checks changed after the build started. The reviewer judges what a script cannot.
+
+Sub-agents hand off through files in the ticket folder, not through the orchestrator. Each role has one instruction file under `roles/` and writes one file, which starts with a verdict line and a short summary. Levi's answers are saved in his words. A new chat can resume a ticket from its folder.
+
+`board/factory.py` is the only thing that changes a ticket's stage, and it refuses a move the line does not allow: no build before the verification plan, no review before the gate passes, no done before the reviewer accepts, and no fifth round without Levi. It has a test file, `board/test_factory.py`.
+
+Added a live board on `http://127.0.0.1:4747`. It shows each ticket's stage, state, round results, and files, and its cost, tokens, time, and model with one row per sub-agent. Cost is read from Claude Code's sub-agent transcripts, matched by the ticket folder line that starts every brief, and priced from `board/prices.json`. It is the API list price of the sub-agents; the orchestrator chat is not counted. Tickets live in `~/.software-factory/tickets/`, one folder each.
+
+The board is a list of tickets, most urgent first, with each ticket's stage drawn as a pipeline in its row, and a side pane with activity, files, and sub-agents. It is keyboard driven. Its look is set by `board/DESIGN.md`: greyscale, colour only for state, no cards or badges.
+
 ## 2026-11-10
 
 STANDARDS now require building a feature into the architecture, not bolting it on. If there is no natural way to build it and a refactor would be the clean path, stop before building and say so. The reviewer checks this under Maintainability.

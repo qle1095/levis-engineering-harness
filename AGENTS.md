@@ -4,6 +4,8 @@ This repo is a docs/skills harness, not an application.
 
 Name or invoke [`orchestrator-e2e`](.agents/skills/orchestrator-e2e/SKILL.md) for the planner / implementer / reviewer pipeline. It runs through. Each role's conversation is a run-record artifact.
 
+Name or invoke [`software-factory`](.agents/skills/software-factory/SKILL.md) to run a pasted task through the factory line. Opus sub-agents do the work, and a live board shows every ticket.
+
 When explaining anything to Levi, follow [`explain-to-levi`](.agents/skills/explain-to-levi/SKILL.md).
 
 To hand a subject to an expert, name or invoke [`spawn-specialist`](.agents/skills/spawn-specialist/SKILL.md). It researches before answering when the answer might change with time.

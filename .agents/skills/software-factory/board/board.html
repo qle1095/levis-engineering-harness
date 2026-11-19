@@ -1,0 +1,1716 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Software Factory</title>
+<style>
+  /* Tokens from DESIGN.md. Nothing below uses a colour that is not one of these. */
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff;
+    --surface: #fafafa;
+    --raised: #f4f4f5;
+    --border: #e8e8ea;
+    --border-strong: #d4d4d8;
+    --text: #111113;
+    --text-2: #5f5f68;
+    --text-3: #9a9aa3;
+    --accent: #4353e0;
+    --working: #1f6fe5;
+    --waiting: #b07800;
+    --stopped: #d1242f;
+    --done: #1a7f37;
+    --quiet: #9a9aa3;
+    --sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    --ease: 120ms ease;
+    /* List columns: Ticket, Pipeline, Round, Cost, Tokens, Time, Model, Updated. */
+    --cols: minmax(320px, 1fr) 208px 56px 64px 64px 56px 96px 64px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0b0b0c;
+      --surface: #121214;
+      --raised: #18181b;
+      --border: #232326;
+      --border-strong: #34343a;
+      --text: #ededef;
+      --text-2: #a1a1aa;
+      --text-3: #6c6c76;
+      --accent: #7c8cff;
+      --working: #4c9aff;
+      --waiting: #e5a50a;
+      --stopped: #f85149;
+      --done: #3fb950;
+      --quiet: #6c6c76;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    color: var(--text);
+    font: 13px/1.5 var(--sans);
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+  }
+  button {
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    text-align: inherit;
+  }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+  [hidden] { display: none !important; }
+  .mono { font-family: var(--mono); }
+  .cut { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0; }
+  .none { color: var(--text-3); }
+
+  /* State colour. A glyph, a word, a pipeline node, or a verdict takes it from here. */
+  .is-working { color: var(--working); }
+  .is-waiting { color: var(--waiting); }
+  .is-stopped { color: var(--stopped); }
+  .is-quiet { color: var(--quiet); }
+  .is-done { color: var(--done); }
+
+  kbd {
+    display: inline-block;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border: 1px solid var(--border-strong);
+    border-radius: 3px;
+    font: 11px/14px var(--mono);
+    color: var(--text-2);
+    text-align: center;
+  }
+
+  /* ---- Top bar */
+  .topbar {
+    flex: none;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .brand { flex: none; font: 600 13px var(--mono); }
+  /* A long home path loses its start, not its end: rtl puts the ellipsis on the left; the inner bdi keeps the path itself ltr. */
+  .home { flex: 1 1 auto; direction: rtl; text-align: left; font: 12px var(--mono); color: var(--text-3); }
+  .counts { flex: none; display: flex; align-items: baseline; gap: 8px; color: var(--text-2); white-space: nowrap; }
+  .counts .sep { color: var(--text-3); }
+  .counts .zero { color: var(--text-3); }
+  .counts .need { color: var(--waiting); }
+  .live { flex: none; display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-3); }
+  .live::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .live.up { color: var(--done); }
+  .live.down { color: var(--stopped); }
+  .help-button {
+    flex: none;
+    width: 24px;
+    height: 24px;
+    display: grid;
+    place-items: center;
+    border-radius: 4px;
+  }
+  .help-button:hover, .help-button[aria-expanded="true"] { background: var(--raised); }
+
+  /* ---- Filter row */
+  .filterbar {
+    flex: none;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .search { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 8px; }
+  .search:focus-within kbd { border-color: var(--accent); color: var(--accent); }
+  .search input {
+    flex: 1;
+    min-width: 0;
+    height: 28px;
+    border: 0;
+    padding: 0;
+    background: none;
+    color: var(--text);
+    font: 13px var(--sans);
+    outline: none;
+  }
+  .search input::placeholder { color: var(--text-3); }
+
+  /* Segmented control and the pane's tabs share one look: text, and a 1px underline when chosen. */
+  .segments { flex: none; display: flex; align-self: stretch; gap: 16px; }
+  .segment {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-2);
+    white-space: nowrap;
+  }
+  .segment:hover { color: var(--text); }
+  .segment .n { color: var(--text-3); font: 12px var(--mono); }
+  .segment[aria-selected="true"] { color: var(--text); }
+  .segment[aria-selected="true"]::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 1px;
+    background: var(--text);
+  }
+  .segment:focus-visible { outline-offset: -2px; }
+
+  .warning {
+    flex: none;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--stopped);
+    font-size: 12px;
+  }
+
+  /* Transitions run only while the pointer is on an element, so a theme change or first paint never animates. */
+  .help-button:hover, .segment:hover, .row:hover, .more:hover, .close:hover .x, .copy:hover, .file:hover {
+    transition: background-color var(--ease), color var(--ease);
+  }
+
+  /* ---- Main: the list, and the pane beside it */
+  .main { flex: 1 1 auto; min-height: 0; display: flex; position: relative; }
+  .list { flex: 1 1 auto; min-width: 0; overflow-y: auto; container: list / inline-size; }
+
+  .colhead, .row {
+    display: grid;
+    grid-template-columns: var(--cols);
+    column-gap: 12px;
+    padding: 0 16px;
+  }
+  .colhead {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    height: 28px;
+    align-items: center;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text-3);
+  }
+  .num { text-align: right; }
+
+  .group-head {
+    position: sticky;
+    top: 28px;
+    z-index: 1;
+    height: 36px;
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    padding: 0 16px 6px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-2);
+  }
+  .group-head .n { font: 400 12px var(--mono); color: var(--text-3); }
+
+  .row {
+    position: relative;
+    width: 100%;
+    height: 52px;
+    align-items: center;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    scroll-margin-top: 64px;
+  }
+  .row:hover { background: var(--surface); }
+  .row.selected { background: var(--raised); }
+  .row.selected::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--accent);
+  }
+  /* The selected row already shows where you are, so a row never draws a focus outline. */
+  .row:focus, .row:focus-visible { outline: none; }
+
+  .ticket { min-width: 0; display: grid; }
+  .line1 { display: flex; align-items: center; gap: 8px; min-width: 0; line-height: 19px; }
+  .line1 .title { font-weight: 500; }
+  .line2 { padding-left: 20px; font-size: 12px; line-height: 16px; color: var(--text-3); }
+  .glyph { flex: none; display: block; }
+
+  .pipe { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .pipe svg { flex: none; display: block; overflow: visible; }
+  .stage-name { font: 12px/16px var(--mono); color: var(--text-2); }
+  .data { font: 12px/16px var(--mono); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .data.none { color: var(--text-3); }
+
+  /* Pipeline nodes. Only the current node carries the ticket's state colour. */
+  .pn-passed { fill: var(--text-2); }
+  .pn-ahead { fill: none; stroke: var(--border-strong); stroke-width: 1; }
+  .pn-skipped { fill: var(--border-strong); }
+  .pn-done { fill: var(--done); }
+  .pn-current { fill: currentColor; }
+  /* A 1px ring with a 2px gap stays crisp at 1x; a wide translucent halo on an 8px node reads as blur. */
+  .pn-ring { fill: none; stroke: currentColor; stroke-width: 1; stroke-opacity: 0.6; }
+  .pl-reached { stroke: var(--text-2); stroke-width: 1; }
+  .pl-ahead { stroke: var(--border); stroke-width: 1; }
+  .is-working .pn-ring { animation: pulse 2s ease-in-out infinite; }
+  .is-working.glyph { animation: spin 1s linear infinite; }
+  @keyframes pulse { 50% { opacity: 0.2; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .more {
+    display: block;
+    padding: 8px 16px 8px 36px;
+    color: var(--text-2);
+    font-size: 12px;
+  }
+  .more:hover { color: var(--text); }
+
+  .empty { padding: 16px; }
+  .empty p { margin: 0; color: var(--text-2); }
+  .empty .how { margin-top: 4px; font: 12px var(--mono); color: var(--text-3); }
+
+  /* Columns drop as the list narrows: Model, Tokens, Time, Cost. The list's own width counts, so the pane is allowed for. */
+  @container list (max-width: 1043.98px) {
+    .colhead, .row { --cols: minmax(320px, 1fr) 208px 56px 64px 64px 56px 64px; }
+    .c-model { display: none; }
+  }
+  @container list (max-width: 935.98px) {
+    .colhead, .row { --cols: minmax(320px, 1fr) 208px 56px 64px 56px 64px; }
+    .c-tokens { display: none; }
+  }
+  @container list (max-width: 859.98px) {
+    .colhead, .row { --cols: minmax(320px, 1fr) 208px 56px 64px 64px; }
+    .c-time { display: none; }
+  }
+  @container list (max-width: 791.98px) {
+    .colhead, .row { --cols: minmax(320px, 1fr) 208px 56px 64px; }
+    .c-cost { display: none; }
+  }
+  /* Narrow: Round and Updated go too, and the pipeline moves under the title. */
+  @container list (max-width: 719.98px) {
+    .colhead, .row { --cols: minmax(0, 1fr); }
+    .c-round, .c-updated, .colhead .c-pipe { display: none; }
+    .row { height: auto; row-gap: 4px; }
+    .row .c-pipe { padding-left: 20px; }
+  }
+
+  /* ---- Detail pane */
+  .pane {
+    flex: none;
+    width: clamp(520px, 46vw, 760px);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--bg);
+    border-left: 1px solid var(--border);
+  }
+  @media (max-width: 1099.98px) {
+    .pane { position: absolute; inset: 0; z-index: 3; width: auto; border-left: 0; }
+  }
+
+  .pane-head {
+    flex: none;
+    padding: 12px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .pane-title-row { display: flex; align-items: flex-start; gap: 12px; }
+  .pane-title { flex: 1; min-width: 0; margin: 0; font-size: 15px; font-weight: 600; line-height: 24px; overflow-wrap: anywhere; }
+  .close { flex: none; display: flex; align-items: center; gap: 4px; height: 24px; }
+  .close .x {
+    width: 24px;
+    height: 24px;
+    display: grid;
+    place-items: center;
+    border-radius: 4px;
+    color: var(--text-2);
+  }
+  .close:hover .x { background: var(--raised); color: var(--text); }
+  .close .esc { font: 11px var(--mono); color: var(--text-3); }
+  .copy {
+    font: 12px var(--mono);
+    color: var(--text-3);
+    max-width: 100%;
+  }
+  .copy:hover { color: var(--text-2); }
+  .copied { margin-left: 8px; font: 12px var(--sans); color: var(--text-3); }
+  .id-row { display: flex; align-items: baseline; min-width: 0; }
+
+  .pane-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; container: pane / inline-size; }
+
+  .facts {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px 16px;
+    margin: 0;
+    padding: 16px;
+  }
+  .facts div { min-width: 0; }
+  .facts dt { font-size: 11px; color: var(--text-3); }
+  .facts dd { margin: 0; display: flex; align-items: center; gap: 6px; font: 12px/20px var(--mono); }
+
+  .big-pipe { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); padding: 4px 16px 16px; }
+  .big-node { position: relative; display: grid; justify-items: center; gap: 4px; }
+  .big-node svg { position: relative; z-index: 1; display: block; overflow: visible; }
+  /* Each node draws half of the line on either side, so the line meets the next node's centre. */
+  .big-node::before, .big-node::after {
+    content: "";
+    position: absolute;
+    top: 8px;
+    height: 1px;
+    background: var(--border);
+  }
+  .big-node::before { left: 0; right: 50%; }
+  .big-node::after { left: 50%; right: 0; }
+  .big-node.in-reached::before, .big-node.out-reached::after { background: var(--text-2); }
+  .big-node:first-child::before, .big-node:last-child::after { display: none; }
+  .big-node span { font-size: 11px; color: var(--text-3); }
+  .big-node.current span { color: var(--text); }
+
+  .tabs {
+    display: flex;
+    gap: 16px;
+    height: 36px;
+    padding: 0 16px;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .tab-body { padding: 16px; }
+  .tab-body.files { padding: 0; }
+  .note { margin: 0; color: var(--text-3); font-size: 12px; }
+
+  /* Tables in the pane: hairlines between rows, no outer box. */
+  /* Cells inherit the grey from the table, so a verdict or dash class on a cell can recolour it. */
+  .table { border-collapse: collapse; font: 12px var(--mono); color: var(--text-2); }
+  .table th { padding: 0 24px 4px 0; text-align: left; font: 400 11px var(--sans); color: var(--text-3); white-space: nowrap; }
+  .table td { padding: 6px 24px 6px 0; border-top: 1px solid var(--border); white-space: nowrap; }
+  .table th:last-child, .table td:last-child { padding-right: 0; }
+  .table .num { text-align: right; }
+  .rounds { margin-bottom: 24px; }
+
+  .updates { list-style: none; margin: 0; padding: 0; }
+  .update {
+    display: grid;
+    grid-template-columns: 40px 88px minmax(0, 1fr);
+    gap: 12px;
+    align-items: baseline;
+    padding: 8px 0;
+    border-top: 1px solid var(--border);
+  }
+  .update:first-child { border-top: 0; padding-top: 0; }
+  .update time { font: 12px var(--mono); color: var(--text-3); }
+  .update .stage-name { overflow: hidden; text-overflow: ellipsis; }
+  .update p { margin: 0; overflow-wrap: anywhere; }
+
+  .agents { width: 100%; table-layout: fixed; }
+  .agents td:first-child { font-family: var(--sans); font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; }
+  .agents th:nth-child(2), .agents td:nth-child(2) { width: 96px; }
+  .agents th:nth-child(n+3), .agents td:nth-child(n+3) { width: 56px; }
+  .agents th, .agents td { padding-right: 12px; }
+  .agents tr.total td { color: var(--text); font-weight: 500; }
+  .agents tr.total td:first-child { font-weight: 500; }
+  .fine { margin: 12px 0 0; font-size: 12px; color: var(--text-3); }
+
+  .files-split { display: grid; grid-template-columns: 240px minmax(0, 1fr); min-height: 100%; }
+  @container pane (max-width: 479.98px) {
+    .files-split { grid-template-columns: minmax(0, 1fr); }
+    .file-list { border-right: 0; border-bottom: 1px solid var(--border); }
+  }
+  .file-list { padding: 8px 0; border-right: 1px solid var(--border); }
+  .file-group { padding: 8px 16px 2px; font-size: 11px; color: var(--text-3); }
+  .file {
+    width: 100%;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    height: 28px;
+    padding: 0 16px;
+    line-height: 28px;
+    font: 12px/28px var(--mono);
+    color: var(--text-2);
+  }
+  .file:hover { background: var(--surface); color: var(--text); }
+  .file.open { background: var(--raised); color: var(--text); }
+  .file:focus-visible { outline-offset: -2px; border-radius: 0; }
+  .file .name { flex: 1; }
+  .file .verdict { flex: none; font-size: 11px; }
+  .file-view { padding: 16px; min-width: 0; }
+  .verdict-line { margin: 0 0 12px; font: 12px var(--mono); }
+
+  /* Rendered Markdown from a sub-agent file. */
+  .doc { overflow-wrap: anywhere; }
+  .doc > :first-child { margin-top: 0; }
+  .doc h4 { margin: 16px 0 4px; font-size: 13px; font-weight: 600; }
+  .doc p { margin: 0 0 8px; }
+  .doc ul, .doc ol { margin: 0 0 8px; padding-left: 20px; }
+  .doc li { margin: 2px 0; }
+  .doc strong { font-weight: 600; }
+  .doc code { padding: 0 4px; border-radius: 3px; background: var(--raised); font: 12px var(--mono); }
+  .doc pre {
+    margin: 0 0 8px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    background: var(--raised);
+    font: 12px/1.5 var(--mono);
+    overflow-x: auto;
+  }
+  .doc table { display: block; overflow-x: auto; margin: 0 0 8px; border-collapse: collapse; font-size: 12px; }
+  .doc th, .doc td { padding: 4px 16px 4px 0; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; overflow-wrap: normal; }
+  .doc th { font-weight: 500; color: var(--text-2); }
+
+  /* Scripts and logs: a mono block with line numbers. */
+  .code {
+    padding: 8px 0;
+    border-radius: 4px;
+    background: var(--raised);
+    font: 12px/1.5 var(--mono);
+    overflow-x: auto;
+  }
+  .code-line { display: flex; min-width: max-content; padding-right: 12px; white-space: pre; }
+  .code-line .ln { flex: none; width: 40px; padding-right: 12px; text-align: right; color: var(--text-3); user-select: none; }
+
+  .pane-foot {
+    flex: none;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ---- Key bar */
+  .keybar {
+    flex: none;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 16px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text-3);
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .keybar span { display: flex; align-items: center; gap: 4px; }
+
+  /* ---- Help */
+  .help {
+    position: fixed;
+    top: 48px;
+    right: 16px;
+    z-index: 10;
+    width: 420px;
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vh - 96px);
+    overflow-y: auto;
+    padding: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+  .help h2 { margin: 0 0 8px; font-size: 12px; font-weight: 500; color: var(--text-2); }
+  .help section + section { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .help p { margin: 0; color: var(--text-2); }
+  .help-states { display: grid; grid-template-columns: 12px 104px minmax(0, 1fr); gap: 6px 8px; align-items: center; margin: 0; }
+  .help-states dd { margin: 0; color: var(--text-2); }
+  .help-keys { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 6px 8px; align-items: center; margin: 0; }
+  .help-keys dt { display: flex; gap: 4px; }
+  .help-keys dd { margin: 0; color: var(--text-2); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <span class="brand">factory</span>
+  <span class="home cut" id="home"></span>
+  <span class="counts" id="counts"></span>
+  <span class="live" id="live">connecting</span>
+  <button class="help-button mono" id="help-button" type="button" aria-expanded="false" aria-controls="help" title="Help">?</button>
+</header>
+<div class="filterbar">
+  <label class="search">
+    <kbd>/</kbd>
+    <input id="filter" type="text" placeholder="Filter tickets" autocomplete="off" spellcheck="false" aria-label="Filter tickets">
+  </label>
+  <div class="segments" id="segments" role="tablist" aria-label="Show"></div>
+</div>
+<div class="warning" id="warning" hidden></div>
+<div class="main">
+  <div class="list" id="list"></div>
+  <aside class="pane" id="pane" aria-label="Ticket detail" hidden></aside>
+</div>
+<footer class="keybar" id="keybar"></footer>
+<div class="help" id="help" role="dialog" aria-label="Help" hidden></div>
+
+<script>
+  "use strict";
+
+  // ---- What the board knows about the line
+
+  const STAGES = ["intake", "research", "verification", "build", "review", "done"];
+  const STATES = {
+    working: { word: "Working", means: "A sub-agent is on it." },
+    waiting: { word: "Waiting on you", means: "A question for you is in the chat." },
+    stopped: { word: "Stopped", means: "The line cannot continue without you." },
+    quiet: { word: "Quiet", means: "Working, but no update for twenty minutes. Its chat may have ended." },
+    done: { word: "Done", means: "Accepted and reported." },
+  };
+  // Groups in the order Levi reads them. A state's position in its list is its sort order.
+  const GROUPS = [
+    { key: "needs", name: "Needs you", states: ["stopped", "waiting"] },
+    { key: "running", name: "Running", states: ["working", "quiet"] },
+    { key: "done", name: "Done", states: ["done"] },
+  ];
+  const SEGMENTS = [{ key: "all", name: "All" }, ...GROUPS];
+  const TABS = [
+    { key: "activity", name: "Activity" },
+    { key: "files", name: "Files" },
+    { key: "agents", name: "Agents" },
+  ];
+  const VERDICT_STATE = {
+    READY: "done", PASS: "done", ACCEPT: "done", DONE: "done",
+    FAIL: "stopped", REJECT: "stopped", BLOCKED: "stopped",
+    "NEEDS-LEVI": "waiting",
+  };
+  const KEYS = [
+    [["j", "k"], "move"],
+    [["enter"], "open"],
+    [["esc"], "close"],
+    [["/"], "filter"],
+    [["1", "2", "3"], "tabs"],
+    [["?"], "help"],
+  ];
+  const POLL_MS = 2000;
+  // A working ticket with no update for this long is shown as quiet. Its chat may have ended.
+  const QUIET_MS = 20 * 60 * 1000;
+  const DONE_SHOWN = 10;
+  // Tickets written before round limits existed had four.
+  const DEFAULT_ROUND_LIMIT = 4;
+  const DASH = "—";
+  const SVG_NS = "http://www.w3.org/2000/svg";
+
+  const view = {
+    loaded: false,
+    board: { home: "", tickets: [], unreadable: [] },
+    drawn: null,          // signature of what the list last drew, so it redraws only on a change
+    filter: "",
+    segment: "all",
+    showAllDone: false,
+    rowIds: [],           // ids of the rows on screen, in order, for j and k
+    cursorId: null,       // the selected row
+    openId: null,         // the ticket in the pane
+    detail: null,         // the full ticket in the pane: updates, files, sub-agents
+    openFile: null,       // { path, text } of the file shown in the Files tab; text is null while loading
+    tab: "activity",
+    error: "",
+  };
+
+  const $ = (id) => document.getElementById(id);
+
+  // ---- Building nodes. Ticket text only ever goes in as text, so a request cannot inject markup.
+
+  function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined && text !== null) node.textContent = text;
+    return node;
+  }
+
+  function svg(tag, attrs) {
+    const node = document.createElementNS(SVG_NS, tag);
+    Object.entries(attrs || {}).forEach(([name, value]) => node.setAttribute(name, value));
+    return node;
+  }
+
+  function button(className, text, onClick) {
+    const node = el("button", className, text);
+    node.type = "button";
+    node.addEventListener("click", onClick);
+    return node;
+  }
+
+  // A value that does not exist yet is a dash in tertiary text.
+  function valueOrDash(tag, className, text) {
+    return text ? el(tag, className, text) : el(tag, className + " none", DASH);
+  }
+
+  // ---- Formatting
+
+  function money(usd) {
+    return "$" + Number(usd).toFixed(2);
+  }
+
+  function tokenCount(tokens) {
+    if (tokens >= 1e6) return (tokens / 1e6).toFixed(1) + "M";
+    if (tokens >= 1e3) return Math.round(tokens / 1e3) + "k";
+    return String(tokens);
+  }
+
+  function duration(ms) {
+    const seconds = Math.max(0, Math.round(ms / 1000));
+    if (seconds < 60) return seconds + "s";
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return minutes + "m";
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return hours + "h " + (minutes % 60) + "m";
+    return Math.floor(hours / 24) + "d " + (hours % 24) + "h";
+  }
+
+  function between(fromIso, toIso) {
+    return new Date(toIso).getTime() - new Date(fromIso).getTime();
+  }
+
+  // "2m", "1h", "3d". The column header says it is the time since the update.
+  function since(iso) {
+    const seconds = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+    if (seconds < 60) return "now";
+    if (seconds < 3600) return Math.floor(seconds / 60) + "m";
+    if (seconds < 86400) return Math.floor(seconds / 3600) + "h";
+    return Math.floor(seconds / 86400) + "d";
+  }
+
+  function clock(iso) {
+    return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+  }
+
+  function dateAndClock(iso) {
+    return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " " + clock(iso);
+  }
+
+  function isToday(iso) {
+    return new Date(iso).toDateString() === new Date().toDateString();
+  }
+
+  function shortModel(model) {
+    return model.replace(/^claude-/, "");
+  }
+
+  function folderName(path) {
+    return path.replace(/[\/\\]+$/, "").split(/[\/\\]/).pop();
+  }
+
+  // The browser does not know the home folder, so shorten the usual macOS and Linux ones.
+  function tildePath(path) {
+    return path.replace(/^\/(Users|home)\/[^\/]+/, "~");
+  }
+
+  // ---- Reading a ticket
+
+  // The ticket file says "working" until someone writes otherwise, so a silent one is shown as quiet.
+  function shownState(ticket) {
+    const silentFor = Date.now() - new Date(ticket.updated).getTime();
+    return ticket.state === "working" && silentFor > QUIET_MS ? "quiet" : ticket.state;
+  }
+
+  function stateWords(ticket) {
+    const state = shownState(ticket);
+    if (state === "quiet") return "Quiet " + since(ticket.updated);
+    return (STATES[state] || { word: state }).word;
+  }
+
+  // How long the ticket has been on the line. A done ticket stops at its last update.
+  function timeOnLine(ticket) {
+    const end = ticket.stage === "done" ? ticket.updated : new Date().toISOString();
+    return duration(between(ticket.created, end));
+  }
+
+  function roundText(ticket) {
+    return ticket.rounds ? ticket.rounds + "/" + (ticket.round_limit || DEFAULT_ROUND_LIMIT) : "";
+  }
+
+  function modelText(usage) {
+    if (!usage || !usage.models.length) return "";
+    const first = shortModel(usage.models[0]);
+    return usage.models.length > 1 ? first + " +" + (usage.models.length - 1) : first;
+  }
+
+  function folderPath(ticket) {
+    return view.board.home + "/tickets/" + ticket.id;
+  }
+
+  // The word after the colon on a sub-agent file's first line: READY, PASS, REJECT.
+  function verdictWord(firstLine) {
+    const found = /^[A-Z][A-Z-]*: ([A-Z][A-Z-]*)$/.exec((firstLine || "").trim());
+    return found ? found[1] : null;
+  }
+
+  function verdictClass(word) {
+    return VERDICT_STATE[word] ? "is-" + VERDICT_STATE[word] : "";
+  }
+
+  // ---- Glyphs and the pipeline. Drawn from constants; no ticket text goes into SVG.
+
+  function stateGlyph(state) {
+    const node = svg("svg", { width: 12, height: 12, viewBox: "0 0 12 12", class: "glyph is-" + state, "aria-hidden": "true" });
+    const stroke = { fill: "none", stroke: "currentColor", "stroke-width": 1.5 };
+    if (state === "working") {
+      node.append(
+        svg("circle", { cx: 6, cy: 6, r: 4.75, ...stroke, "stroke-opacity": 0.3 }),
+        svg("path", { d: "M6 1.25 A4.75 4.75 0 0 1 10.75 6", ...stroke, "stroke-linecap": "round" })
+      );
+    } else if (state === "waiting") {
+      node.append(svg("circle", { cx: 6, cy: 6, r: 4.75, ...stroke }), svg("circle", { cx: 6, cy: 6, r: 2, fill: "currentColor" }));
+    } else if (state === "stopped") {
+      node.append(svg("rect", { x: 2, y: 2, width: 8, height: 8, rx: 2, fill: "currentColor" }));
+    } else if (state === "done") {
+      node.append(svg("path", {
+        d: "M2.5 6.25 L5 8.75 L9.5 3.5", fill: "none", stroke: "currentColor",
+        "stroke-width": 1.75, "stroke-linecap": "round", "stroke-linejoin": "round",
+      }));
+    } else {
+      node.append(svg("circle", { cx: 6, cy: 6, r: 4.25, ...stroke }));
+    }
+    return node;
+  }
+
+  // What one stage's node looks like on this ticket.
+  function nodeKind(ticket, index) {
+    const current = STAGES.indexOf(ticket.stage);
+    // A standard ticket skips research, done or not: a filled node there would say it was researched.
+    if (index === 1 && ticket.kind === "standard" && current !== 1) return "skipped";
+    if (ticket.stage === "done") return "done";
+    if (index < current) return "passed";
+    if (index === current) return "current";
+    return "ahead";
+  }
+
+  function stageReached(ticket, index) {
+    return index <= STAGES.indexOf(ticket.stage);
+  }
+
+  // One node, centred on (cx, cy), with radius r for a full node.
+  function pipelineNode(kind, cx, cy, r) {
+    if (kind === "skipped") return [svg("circle", { cx, cy, r: r / 2, class: "pn-skipped" })];
+    if (kind === "ahead") return [svg("circle", { cx, cy, r: r - 0.5, class: "pn-ahead" })];
+    if (kind === "current") {
+      return [svg("circle", { cx, cy, r: r + 2.5, class: "pn-ring" }), svg("circle", { cx, cy, r, class: "pn-current" })];
+    }
+    return [svg("circle", { cx, cy, r, class: "pn-" + kind })];
+  }
+
+  // The row's pipeline: 8px nodes 20px apart, joined by a 1px line.
+  function rowPipeline(ticket) {
+    const gap = 20, r = 4, cy = 7.5, first = 7;
+    const node = svg("svg", { width: first * 2 + gap * 5, height: 15, class: "is-" + shownState(ticket), "aria-hidden": "true" });
+    STAGES.forEach((stage, index) => {
+      const cx = first + index * gap;
+      if (index > 0) {
+        const reached = stageReached(ticket, index);
+        node.append(svg("line", { x1: cx - gap + r, x2: cx - r, y1: cy, y2: cy, class: reached ? "pl-reached" : "pl-ahead" }));
+      }
+      const group = svg("g");
+      const title = svg("title");
+      title.textContent = stage;
+      group.append(title, ...pipelineNode(nodeKind(ticket, index), cx, cy, r));
+      node.append(group);
+    });
+    return node;
+  }
+
+  // The pane's pipeline: 10px nodes spread across the pane, each stage named under its node.
+  function bigPipeline(ticket) {
+    const box = el("div", "big-pipe is-" + shownState(ticket));
+    STAGES.forEach((stage, index) => {
+      const kind = nodeKind(ticket, index);
+      const cell = el("div", "big-node");
+      cell.classList.toggle("current", stage === ticket.stage);
+      cell.classList.toggle("in-reached", stageReached(ticket, index));
+      cell.classList.toggle("out-reached", stageReached(ticket, index + 1));
+      cell.title = stage;
+      const dot = svg("svg", { width: 16, height: 16, "aria-hidden": "true" });
+      dot.append(...pipelineNode(kind, 8, 8, 5));
+      cell.append(dot, el("span", "", stage));
+      box.append(cell);
+    });
+    return box;
+  }
+
+  // ---- Choosing and sorting rows
+
+  function newestUpdateFirst(a, b) {
+    return b.updated.localeCompare(a.updated);
+  }
+
+  function matchesFilter(ticket) {
+    const text = view.filter.trim().toLowerCase();
+    if (!text) return true;
+    return [ticket.title, ticket.id, ticket.target, ticket.kind, ticket.stage]
+      .some((field) => (field || "").toLowerCase().includes(text));
+  }
+
+  function groupTickets(group, tickets) {
+    const order = (ticket) => group.states.indexOf(shownState(ticket));
+    return tickets
+      .filter((ticket) => order(ticket) >= 0)
+      .sort((a, b) => order(a) - order(b) || newestUpdateFirst(a, b));
+  }
+
+  // The groups on screen, each with all its matching tickets and the ones shown.
+  function visibleGroups() {
+    const matching = view.board.tickets.filter(matchesFilter);
+    return GROUPS
+      .filter((group) => view.segment === "all" || view.segment === group.key)
+      .map((group) => {
+        const tickets = groupTickets(group, matching);
+        const cut = group.key === "done" && !view.showAllDone;
+        return { group, tickets, shown: cut ? tickets.slice(0, DONE_SHOWN) : tickets };
+      })
+      .filter((entry) => entry.tickets.length);
+  }
+
+  function findTicket(id) {
+    return view.board.tickets.find((ticket) => ticket.id === id) || null;
+  }
+
+  // ---- Top bar and filter row
+
+  function countsOf(tickets) {
+    const states = tickets.map(shownState);
+    const today = tickets.filter((t) => t.stage !== "done" || isToday(t.updated));
+    return {
+      needs: states.filter((s) => s === "stopped" || s === "waiting").length,
+      running: states.filter((s) => s === "working" || s === "quiet").length,
+      done: states.filter((s) => s === "done").length,
+      doneToday: tickets.filter((t) => shownState(t) === "done" && isToday(t.updated)).length,
+      costToday: today.reduce((sum, t) => sum + (t.usage ? t.usage.cost_usd : 0), 0),
+    };
+  }
+
+  function countText(value, label, className, title) {
+    const node = el("span", value ? className || "" : "zero", value + " " + label);
+    node.title = title;
+    return node;
+  }
+
+  function renderTopBar(counts) {
+    const home = $("home");
+    const path = el("bdi", "", tildePath(view.board.home));
+    path.dir = "ltr";
+    home.replaceChildren(path);
+    home.title = view.board.home;
+    const cost = el("span", counts.costToday ? "" : "zero", money(counts.costToday));
+    cost.title = "API list price of the sub-agents on today's tickets";
+    const parts = [
+      countText(counts.needs, "need you", "need", "Waiting on you or stopped"),
+      countText(counts.running, "running", "", "Working or quiet"),
+      countText(counts.doneToday, "done today", "", "Accepted today"),
+      cost,
+    ];
+    $("counts").replaceChildren(...parts.flatMap((part, i) => (i ? [el("span", "sep", "·"), part] : [part])));
+    // The tab title carries the number that needs Levi, so it shows from another tab.
+    document.title = (counts.needs ? "(" + counts.needs + ") " : "") + "Software Factory";
+  }
+
+  function renderSegments(counts) {
+    const numbers = { all: view.board.tickets.length, needs: counts.needs, running: counts.running, done: counts.done };
+    $("segments").replaceChildren(...SEGMENTS.map((segment) => {
+      const node = button("segment", segment.name, () => chooseSegment(segment.key));
+      node.setAttribute("role", "tab");
+      node.setAttribute("aria-selected", String(view.segment === segment.key));
+      node.append(el("span", "n", String(numbers[segment.key])));
+      return node;
+    }));
+  }
+
+  function renderWarning() {
+    const unreadable = view.board.unreadable.length ? "Cannot read ticket file: " + view.board.unreadable.join(", ") : "";
+    const text = view.error || unreadable;
+    $("warning").hidden = !text;
+    $("warning").textContent = text;
+  }
+
+  function setLive(up) {
+    const live = $("live");
+    live.className = "live " + (up ? "up" : "down");
+    live.textContent = up ? "live" : "offline";
+  }
+
+  // ---- The list
+
+  const COLUMNS = [
+    { key: "ticket", name: "Ticket" },
+    { key: "pipe", name: "Pipeline" },
+    { key: "round", name: "Round", num: true },
+    { key: "cost", name: "Cost", num: true },
+    { key: "tokens", name: "Tokens", num: true },
+    { key: "time", name: "Time", num: true },
+    { key: "model", name: "Model" },
+    { key: "updated", name: "Updated", num: true },
+  ];
+
+  function columnHeader() {
+    const head = el("div", "colhead");
+    COLUMNS.forEach((column) => head.append(el("span", "c-" + column.key + (column.num ? " num" : ""), column.name)));
+    return head;
+  }
+
+  // Line 2: why it needs a look, then kind, repo, and the latest note. Working and done say so with the glyph and group.
+  const STATE_WORD_IN_ROW = ["waiting", "stopped", "quiet"];
+  function ticketMeta(ticket) {
+    const line = el("div", "line2 cut");
+    const state = shownState(ticket);
+    const facts = [ticket.kind, ticket.target ? folderName(ticket.target) : "", ticket.last_note].filter(Boolean);
+    if (STATE_WORD_IN_ROW.includes(state)) {
+      line.append(el("span", "is-" + state, stateWords(ticket)));
+      if (facts.length) line.append(" · ");
+    }
+    line.append(facts.join(" · "));
+    return line;
+  }
+
+  function ticketCell(ticket) {
+    const cell = el("span", "ticket c-ticket");
+    const first = el("span", "line1");
+    first.append(stateGlyph(shownState(ticket)), el("span", "title cut", ticket.title));
+    cell.append(first, ticketMeta(ticket));
+    cell.title = ticket.title;
+    return cell;
+  }
+
+  function pipelineCell(ticket) {
+    const cell = el("span", "pipe c-pipe");
+    cell.append(rowPipeline(ticket), el("span", "stage-name cut", ticket.stage));
+    return cell;
+  }
+
+  function dataCell(column, text, title) {
+    const cell = valueOrDash("span", "data c-" + column, text);
+    if (column !== "model") cell.classList.add("num");
+    if (title) cell.title = title;
+    return cell;
+  }
+
+  function row(ticket) {
+    const usage = ticket.usage;
+    const node = button("row", undefined, () => openTicket(ticket.id));
+    node.dataset.id = ticket.id;
+    node.classList.toggle("selected", ticket.id === view.cursorId);
+    node.append(
+      ticketCell(ticket),
+      pipelineCell(ticket),
+      dataCell("round", roundText(ticket)),
+      dataCell("cost", usage ? money(usage.cost_usd) : ""),
+      dataCell("tokens", usage ? tokenCount(usage.tokens) : ""),
+      dataCell("time", timeOnLine(ticket)),
+      dataCell("model", modelText(usage), usage ? usage.models.join(", ") : ""),
+      dataCell("updated", since(ticket.updated), dateAndClock(ticket.updated))
+    );
+    return node;
+  }
+
+  function groupSection({ group, tickets, shown }) {
+    const section = el("section");
+    const head = el("div", "group-head", group.name);
+    head.append(el("span", "n", String(tickets.length)));
+    section.append(head, ...shown.map(row));
+    if (shown.length < tickets.length) {
+      section.append(button("more", "Show all " + tickets.length, () => { view.showAllDone = true; renderList(); }));
+    }
+    return section;
+  }
+
+  function emptyList() {
+    const box = el("div", "empty");
+    if (!view.board.tickets.length) {
+      box.append(el("p", "", "No tickets yet."), el("p", "how", "Invoke software-factory with a task to open one."));
+    } else if (view.filter.trim()) {
+      box.append(el("p", "", "No tickets match “" + view.filter.trim() + "”."));
+    } else {
+      const segment = SEGMENTS.find((s) => s.key === view.segment);
+      box.append(el("p", "", "No tickets in " + segment.name + "."));
+    }
+    return box;
+  }
+
+  function renderList() {
+    const groups = visibleGroups();
+    view.rowIds = groups.flatMap((entry) => entry.shown.map((ticket) => ticket.id));
+    // A redraw replaces the rows. Put keyboard focus back on the same row if it was on one.
+    const focusedId = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.id : null;
+    const list = $("list");
+    list.replaceChildren(columnHeader(), ...(groups.length ? groups.map(groupSection) : [emptyList()]));
+    if (focusedId) {
+      const again = rowNode(focusedId);
+      if (again) again.focus({ preventScroll: true });
+    }
+  }
+
+  function rowNode(id) {
+    return [...$("list").querySelectorAll(".row")].find((node) => node.dataset.id === id) || null;
+  }
+
+  function renderBoard() {
+    const counts = countsOf(view.board.tickets);
+    renderTopBar(counts);
+    renderSegments(counts);
+    renderWarning();
+    renderList();
+  }
+
+  // ---- The detail pane
+
+  function paneHeader(ticket) {
+    const head = el("div", "pane-head");
+    const titleRow = el("div", "pane-title-row");
+    const close = button("close", undefined, closePane);
+    close.title = "Close";
+    close.setAttribute("aria-label", "Close");
+    const x = el("span", "x");
+    const cross = svg("svg", { width: 12, height: 12, viewBox: "0 0 12 12", "aria-hidden": "true" });
+    cross.append(svg("path", { d: "M3 3 L9 9 M9 3 L3 9", stroke: "currentColor", "stroke-width": 1.5, "stroke-linecap": "round" }));
+    x.append(cross);
+    close.append(x, el("span", "esc", "esc"));
+    titleRow.append(el("h2", "pane-title", ticket.title), close);
+    head.append(titleRow, copyLine(ticket.id, ticket.id, "Copy the ticket id"));
+    return head;
+  }
+
+  // Text that copies itself when clicked, and says so for a second.
+  function copyLine(text, copyValue, title) {
+    const line = el("div", "id-row");
+    const copy = button("copy cut", text, () => {
+      navigator.clipboard.writeText(copyValue).then(() => {
+        if (line.querySelector(".copied")) return;
+        const note = el("span", "copied", "copied");
+        line.append(note);
+        setTimeout(() => note.remove(), 1000);
+      }, () => {});
+    });
+    copy.title = title;
+    line.append(copy);
+    return line;
+  }
+
+  function fact(label, value, title) {
+    const item = el("div");
+    const dd = el("dd", "cut");
+    if (value instanceof Node) dd.append(value);
+    else if (value) dd.append(el("span", "cut", value));
+    else dd.append(el("span", "none", DASH));
+    if (title) dd.title = title;
+    item.append(el("dt", "", label), dd);
+    return item;
+  }
+
+  function stateValue(ticket) {
+    const state = shownState(ticket);
+    const value = document.createDocumentFragment();
+    value.append(stateGlyph(state), el("span", "cut is-" + state, stateWords(ticket)));
+    return value;
+  }
+
+  function facts(ticket) {
+    const usage = ticket.usage;
+    const list = el("dl", "facts");
+    list.append(
+      fact("State", stateValue(ticket)),
+      fact("Stage", ticket.stage),
+      fact("Kind", ticket.kind, ticket.kind ? "" : "Intake has not decided the kind yet"),
+      fact("Round", roundText(ticket), "One round is one pass of build, gate, review"),
+      fact("Cost", usage ? money(usage.cost_usd) : "", "API list price of this ticket's sub-agents"),
+      fact("Tokens", usage ? tokenCount(usage.tokens) : ""),
+      fact("Time", timeOnLine(ticket), "Time on the line since the ticket opened"),
+      fact("Model", modelText(usage), usage ? usage.models.join(", ") : ""),
+      fact("Repo", ticket.target ? folderName(ticket.target) : "", ticket.target),
+      fact("Opened", dateAndClock(ticket.created), ticket.created),
+      fact("Updated", dateAndClock(ticket.updated), ticket.updated)
+    );
+    return list;
+  }
+
+  function tabCount(key, ticket) {
+    if (!ticket) return null;
+    if (key === "files") return ticket.files.length;
+    if (key === "agents") return ticket.usage ? ticket.usage.agents.length : 0;
+    return null;
+  }
+
+  function tabBar(ticket) {
+    const bar = el("div", "tabs");
+    bar.setAttribute("role", "tablist");
+    TABS.forEach((tab, index) => {
+      const node = button("segment", tab.name, () => chooseTab(tab.key));
+      node.setAttribute("role", "tab");
+      node.setAttribute("aria-selected", String(view.tab === tab.key));
+      node.title = tab.name + " (" + (index + 1) + ")";
+      const count = tabCount(tab.key, ticket);
+      if (count !== null) node.append(el("span", "n", String(count)));
+      bar.append(node);
+    });
+    return bar;
+  }
+
+  function roundsTable(ticket) {
+    const table = el("table", "table rounds");
+    const head = el("tr");
+    ["Round", "Build", "Gate", "Review"].forEach((name) => head.append(el("th", "", name)));
+    table.append(head);
+    ticket.round_results.forEach((result) => {
+      const line = el("tr");
+      line.append(el("td", "", String(result.round)));
+      ["build", "gate", "review"].forEach((step) => {
+        const word = result[step];
+        line.append(word ? el("td", verdictClass(word), word) : el("td", "none", DASH));
+      });
+      table.append(line);
+    });
+    return table;
+  }
+
+  function activityTab(ticket) {
+    const body = el("div", "tab-body");
+    if (ticket.round_results.length) body.append(roundsTable(ticket));
+    if (!ticket.updates.length) {
+      body.append(el("p", "note", "No updates yet."));
+      return body;
+    }
+    const list = el("ol", "updates");
+    ticket.updates.slice().reverse().forEach((update) => {
+      const item = el("li", "update");
+      const at = el("time", "", clock(update.at));
+      at.dateTime = update.at;
+      at.title = dateAndClock(update.at);
+      item.append(at, el("span", "stage-name", update.stage), el("p", "", update.note));
+      list.append(item);
+    });
+    body.append(list);
+    return body;
+  }
+
+  // Files at the top of the folder first, then each round's files under a "round n" label.
+  function fileGroups(files) {
+    const groups = [{ label: "", files: [] }];
+    const rounds = new Map();
+    files.forEach((file) => {
+      const round = /^round-(\d+)\//.exec(file.path);
+      if (!round) { groups[0].files.push(file); return; }
+      if (!rounds.has(round[1])) {
+        rounds.set(round[1], { label: "round " + round[1], files: [] });
+        groups.push(rounds.get(round[1]));
+      }
+      rounds.get(round[1]).files.push(file);
+    });
+    return groups.filter((group) => group.files.length);
+  }
+
+  function fileButton(file, inRound) {
+    const name = inRound ? file.path.replace(/^round-\d+\//, "") : file.path;
+    const node = button("file", undefined, () => showFile(file.path));
+    node.classList.toggle("open", !!view.openFile && view.openFile.path === file.path);
+    node.title = file.path;
+    node.append(el("span", "name cut", name));
+    const word = verdictWord(file.first_line);
+    if (word) node.append(el("span", "verdict " + verdictClass(word), word));
+    return node;
+  }
+
+  function fileList(ticket) {
+    const list = el("div", "file-list");
+    fileGroups(ticket.files).forEach((group) => {
+      if (group.label) list.append(el("div", "file-group", group.label));
+      group.files.forEach((file) => list.append(fileButton(file, !!group.label)));
+    });
+    return list;
+  }
+
+  function codeBlock(text) {
+    const block = el("div", "code");
+    const lines = text.replace(/\n$/, "").split("\n");
+    lines.forEach((line, index) => {
+      const item = el("div", "code-line");
+      item.append(el("span", "ln", String(index + 1)), el("span", "", line));
+      block.append(item);
+    });
+    return block;
+  }
+
+  function fileView() {
+    const box = el("div", "file-view");
+    const file = view.openFile;
+    if (!file) return box;
+    if (file.text === null) {
+      box.append(el("p", "note", "Loading"));
+      return box;
+    }
+    const lines = file.text.split("\n");
+    const word = verdictWord(lines[0]);
+    // A sub-agent's file opens with its verdict line. It goes above the document as plain coloured text.
+    if (word) box.append(el("p", "verdict-line " + verdictClass(word), lines[0].trim()));
+    const rest = word ? lines.slice(1).join("\n") : file.text;
+    if (!rest.trim()) box.append(el("p", "note", "Empty file."));
+    else box.append(file.path.endsWith(".md") ? markdown(rest) : codeBlock(rest));
+    return box;
+  }
+
+  function filesTab(ticket) {
+    const body = el("div", "tab-body files");
+    if (!ticket.files.length) {
+      body.classList.remove("files");
+      body.append(el("p", "note", "No files yet."));
+      return body;
+    }
+    const split = el("div", "files-split");
+    split.append(fileList(ticket), fileView());
+    body.append(split);
+    return body;
+  }
+
+  function inputTokens(tokens) {
+    return tokens.input + tokens.cache_read + tokens.cache_write_5m + tokens.cache_write_1h;
+  }
+
+  function agentDuration(agent) {
+    return agent.started && agent.ended ? between(agent.started, agent.ended) : 0;
+  }
+
+  function agentRow(cells, className) {
+    const line = el("tr", className || "");
+    cells.forEach(([text, isNum, title]) => {
+      // null is a cell with nothing to say, such as the model on the total row.
+      const cell = text === null ? el("td") : valueOrDash("td", isNum ? "num" : "", text);
+      if (title) cell.title = title;
+      line.append(cell);
+    });
+    return line;
+  }
+
+  function agentsTab(ticket) {
+    const body = el("div", "tab-body");
+    const usage = ticket.usage;
+    if (!usage || !usage.agents.length) {
+      body.append(el("p", "note", "No sub-agent usage yet. It shows once a sub-agent whose brief starts with the ticket folder line has run."));
+      return body;
+    }
+    const table = el("table", "table agents");
+    const head = el("tr");
+    [["Sub-agent"], ["Model"], ["In", true], ["Out", true], ["Cost", true], ["Time", true]].forEach(([name, isNum]) => {
+      head.append(el("th", isNum ? "num" : "", name));
+    });
+    table.append(head);
+    const total = { input: 0, output: 0, ms: 0 };
+    usage.agents.forEach((agent) => {
+      const ms = agentDuration(agent);
+      total.input += inputTokens(agent.tokens);
+      total.output += agent.tokens.output;
+      total.ms += ms;
+      table.append(agentRow([
+        [agent.label, false, agent.label],
+        [agent.model ? shortModel(agent.model) : "", false, agent.model],
+        [tokenCount(inputTokens(agent.tokens)), true, "Input, cache reads, and cache writes"],
+        [tokenCount(agent.tokens.output), true],
+        [agent.unpriced.length ? "" : money(agent.cost_usd), true, agent.unpriced.length ? "No price for this model" : ""],
+        [ms ? duration(ms) : "", true],
+      ]));
+    });
+    table.append(agentRow([
+      ["Total"], [null], [tokenCount(total.input), true], [tokenCount(total.output), true],
+      [money(usage.cost_usd), true], [total.ms ? duration(total.ms) : "", true],
+    ], "total"));
+    const unpriced = usage.unpriced.length ? " No price is listed for " + usage.unpriced.join(", ") + "." : "";
+    body.append(table, el("p", "fine",
+      "Cost is the API list price of the sub-agents. The orchestrator chat is not counted. " +
+      "On a subscription it is relative spend, not a bill." + unpriced));
+    return body;
+  }
+
+  function tabContent(ticket) {
+    if (!ticket) {
+      const body = el("div", "tab-body");
+      body.append(el("p", "note", "Loading"));
+      return body;
+    }
+    if (view.tab === "files") return filesTab(ticket);
+    if (view.tab === "agents") return agentsTab(ticket);
+    return activityTab(ticket);
+  }
+
+  function paneFooter(ticket) {
+    const foot = el("div", "pane-foot");
+    foot.append(copyLine(folderPath(ticket), folderPath(ticket), "Copy the ticket folder path"));
+    return foot;
+  }
+
+  function renderPane() {
+    const pane = $("pane");
+    const summary = findTicket(view.openId);
+    pane.hidden = !summary;
+    if (!summary) {
+      pane.replaceChildren();
+      delete pane.dataset.id;
+      return;
+    }
+    const loaded = view.detail && view.detail.id === summary.id ? view.detail : null;
+    const oldBody = pane.querySelector(".pane-body");
+    // Keep the reader's place when the same ticket redraws; start at the top for a new one.
+    const scroll = oldBody && pane.dataset.id === summary.id ? oldBody.scrollTop : 0;
+    const body = el("div", "pane-body");
+    body.append(facts(summary), bigPipeline(summary), tabBar(loaded), tabContent(loaded));
+    pane.replaceChildren(paneHeader(summary), body, paneFooter(summary));
+    body.scrollTop = scroll;
+    pane.dataset.id = summary.id;
+  }
+
+  // ---- A small Markdown reader for the files sub-agents write. It builds nodes; it never sets HTML.
+
+  const LIST_ITEM = /^\s*([-*]|\d+\.)\s+/;
+  const NUMBERED_ITEM = /^\s*\d+\.\s+/;
+  const INLINE = /(\*\*[^*]+\*\*|`[^`]+`)/;
+
+  // Only **bold** and `code` are inline marks; everything else stays as typed.
+  function inline(text) {
+    const fragment = document.createDocumentFragment();
+    text.split(INLINE).forEach((part) => {
+      if (/^\*\*[^*]+\*\*$/.test(part)) fragment.append(el("strong", "", part.slice(2, -2)));
+      else if (/^`[^`]+`$/.test(part)) fragment.append(el("code", "", part.slice(1, -1)));
+      else if (part) fragment.append(part);
+    });
+    return fragment;
+  }
+
+  function withInline(tag, text) {
+    const node = el(tag);
+    node.append(inline(text));
+    return node;
+  }
+
+  function tableRow(line, cellTag) {
+    const tr = el("tr");
+    line.trim().replace(/^\||\|$/g, "").split("|").forEach((cell) => tr.append(withInline(cellTag, cell.trim())));
+    return tr;
+  }
+
+  // Each reader takes the lines from index i and returns [node, next index].
+  function readFence(lines, i) {
+    const code = [];
+    for (i++; i < lines.length && !lines[i].startsWith("```"); i++) code.push(lines[i]);
+    return [el("pre", "", code.join("\n")), i + 1];
+  }
+
+  function readList(lines, i) {
+    const list = el(NUMBERED_ITEM.test(lines[i]) ? "ol" : "ul");
+    for (; i < lines.length && LIST_ITEM.test(lines[i]); i++) list.append(withInline("li", lines[i].replace(LIST_ITEM, "")));
+    return [list, i];
+  }
+
+  function readTable(lines, i) {
+    const table = el("table");
+    for (; i < lines.length && lines[i].trim().startsWith("|"); i++) {
+      if (/^[\s|:-]+$/.test(lines[i])) continue;   // the row of dashes under the header
+      table.append(tableRow(lines[i], table.children.length ? "td" : "th"));
+    }
+    return [table, i];
+  }
+
+  function readParagraph(lines, i) {
+    const words = [];
+    const startsBlock = (line) => !line.trim() || line.startsWith("```") || /^#{1,6}\s/.test(line) ||
+      LIST_ITEM.test(line) || line.trim().startsWith("|");
+    for (; i < lines.length && !startsBlock(lines[i]); i++) words.push(lines[i].trim());
+    return [withInline("p", words.join(" ")), i];
+  }
+
+  function markdown(text) {
+    const box = el("div", "doc");
+    const lines = text.replace(/\r/g, "").split("\n");
+    let i = 0;
+    while (i < lines.length) {
+      const line = lines[i];
+      let read;
+      if (!line.trim()) { i++; continue; }
+      if (line.startsWith("```")) read = readFence(lines, i);
+      else if (/^#{1,6}\s/.test(line)) read = [withInline("h4", line.replace(/^#+\s*/, "")), i + 1];
+      else if (LIST_ITEM.test(line)) read = readList(lines, i);
+      else if (line.trim().startsWith("|")) read = readTable(lines, i);
+      else read = readParagraph(lines, i);
+      box.append(read[0]);
+      i = read[1];
+    }
+    return box;
+  }
+
+  // ---- Talking to the board server
+
+  async function fetchText(url) {
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) throw new Error("board answered " + response.status + " for " + url);
+    return response.text();
+  }
+
+  function ticketUrl(id) {
+    return "/api/tickets/" + encodeURIComponent(id);
+  }
+
+  function setError(text) {
+    view.error = text;
+    renderWarning();
+  }
+
+  async function showFile(path) {
+    const id = view.openId;
+    const reload = view.openFile && view.openFile.path === path;
+    if (!reload) {
+      view.openFile = { path, text: null };
+      renderPane();
+    }
+    try {
+      const filePath = path.split("/").map(encodeURIComponent).join("/");
+      const text = await fetchText(ticketUrl(id) + "/files/" + filePath);
+      if (view.openId !== id || view.openFile.path !== path) return;   // Levi moved on while it loaded
+      view.openFile = { path, text };
+      setError("");
+      renderPane();
+    } catch (error) {
+      setError("Cannot open the file: " + error.message);
+    }
+  }
+
+  // What, in the summary, means the pane's full ticket is out of date.
+  function detailKey(ticket) {
+    return [ticket.updated, ticket.usage ? ticket.usage.tokens : 0, JSON.stringify(ticket.round_results)].join("|");
+  }
+
+  // The pane refetches only when its own ticket changed, so reading it is not interrupted.
+  async function loadDetail() {
+    const id = view.openId;
+    const summary = findTicket(id);
+    if (!summary) return;
+    if (view.detail && view.detail.id === id && detailKey(view.detail) === detailKey(summary)) return;
+    const ticket = JSON.parse(await fetchText(ticketUrl(id)));
+    if (view.openId !== id) return;
+    const firstLoad = !view.detail || view.detail.id !== id;
+    view.detail = ticket;
+    setError("");
+    renderPane();
+    // Open the request first, so the pane starts with what was asked. Reload an open file: it may have changed.
+    const wanted = firstLoad ? "request.md" : view.openFile && view.openFile.path;
+    if (wanted && ticket.files.some((file) => file.path === wanted)) await showFile(wanted);
+  }
+
+  // Quiet tickets and relative times change with the clock, not the payload, so both are part of what was drawn.
+  function boardSignature(payload, board) {
+    const quiet = board.tickets.filter((t) => shownState(t) === "quiet").map((t) => t.id).join();
+    return payload + quiet + Math.floor(Date.now() / 60000);
+  }
+
+  async function poll() {
+    let payload;
+    try {
+      payload = await fetchText("/api/tickets");
+      setLive(true);
+    } catch (error) {
+      setLive(false);   // the list keeps what it last showed
+      return;
+    }
+    try {
+      const next = JSON.parse(payload);
+      const signature = boardSignature(payload, next);
+      if (signature !== view.drawn) {
+        view.board = next;
+        view.drawn = signature;
+        view.loaded = true;
+        renderBoard();
+        if (view.openId && !findTicket(view.openId)) closePane();
+        else renderPane();
+      }
+      if (view.openId) await loadDetail();
+    } catch (error) {
+      setError("The board could not draw the tickets: " + error.message);
+    }
+  }
+
+  // ---- Actions
+
+  function setCursor(id) {
+    view.cursorId = id;
+    $("list").querySelectorAll(".row").forEach((node) => node.classList.toggle("selected", node.dataset.id === id));
+    const node = rowNode(id);
+    if (node) node.scrollIntoView({ block: "nearest" });
+  }
+
+  function openTicket(id) {
+    setCursor(id);
+    if (view.openId === id) return;
+    view.openId = id;
+    view.detail = null;
+    view.openFile = null;
+    history.replaceState(null, "", "#" + encodeURIComponent(id));
+    renderPane();
+    loadDetail().catch((error) => setError("Cannot open the ticket: " + error.message));
+  }
+
+  function closePane() {
+    view.openId = null;
+    view.detail = null;
+    view.openFile = null;
+    history.replaceState(null, "", location.pathname + location.search);
+    renderPane();
+  }
+
+  // j and k move the selection. With the pane open, the pane follows it.
+  function moveCursor(step) {
+    const ids = view.rowIds;
+    if (!ids.length) return;
+    const at = ids.indexOf(view.cursorId);
+    const next = at < 0 ? (step > 0 ? 0 : ids.length - 1) : Math.min(ids.length - 1, Math.max(0, at + step));
+    if (view.openId) openTicket(ids[next]);
+    else setCursor(ids[next]);
+  }
+
+  function chooseSegment(key) {
+    view.segment = key;
+    renderSegments(countsOf(view.board.tickets));
+    renderList();
+  }
+
+  function chooseTab(key) {
+    view.tab = key;
+    renderPane();
+  }
+
+  function toggleHelp(open) {
+    const help = $("help");
+    help.hidden = !open;
+    $("help-button").setAttribute("aria-expanded", String(open));
+  }
+
+  function onKey(event) {
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
+    if (event.target === $("filter")) {
+      if (event.key === "Escape") $("filter").blur();
+      return;
+    }
+    const onRow = event.target.classList && event.target.classList.contains("row");
+    const onOtherButton = event.target.tagName === "BUTTON" && !onRow;
+    switch (event.key) {
+      case "j": case "ArrowDown": moveCursor(1); break;
+      case "k": case "ArrowUp": moveCursor(-1); break;
+      case "Enter":
+        if (onOtherButton) return;   // let the focused button do its own thing
+        if (onRow) openTicket(event.target.dataset.id);
+        else if (view.cursorId) openTicket(view.cursorId);
+        break;
+      case "Escape":
+        if (!$("help").hidden) toggleHelp(false);
+        else if (view.openId) closePane();
+        break;
+      case "/": $("filter").focus(); break;
+      case "1": case "2": case "3":
+        if (!view.openId) return;
+        chooseTab(TABS[Number(event.key) - 1].key);
+        break;
+      case "?": toggleHelp($("help").hidden); break;
+      default: return;
+    }
+    event.preventDefault();
+  }
+
+  // ---- Static parts: the key bar and the help panel
+
+  function keyCaps(keys) {
+    return keys.map((key) => el("kbd", "", key));
+  }
+
+  function renderKeyBar() {
+    $("keybar").replaceChildren(...KEYS.map(([keys, action]) => {
+      const item = el("span");
+      item.append(...keyCaps(keys), action);
+      return item;
+    }));
+  }
+
+  function renderHelp() {
+    const states = el("dl", "help-states");
+    Object.entries(STATES).forEach(([state, info]) => {
+      const glyph = el("dt");
+      glyph.append(stateGlyph(state));
+      states.append(glyph, el("dt", "is-" + state, info.word), el("dd", "", info.means));
+    });
+    const keys = el("dl", "help-keys");
+    const keyLines = [
+      [["j", "k"], "Move the selection. Arrow keys work too."],
+      [["enter"], "Open the selected ticket."],
+      [["esc"], "Close the pane or this help."],
+      [["/"], "Filter by title, id, repo, kind, or stage."],
+      [["1", "2", "3"], "Activity, Files, Agents in the pane."],
+      [["?"], "Show or hide this help."],
+    ];
+    keyLines.forEach(([caps, text]) => {
+      const dt = el("dt");
+      dt.append(...keyCaps(caps));
+      keys.append(dt, el("dd", "", text));
+    });
+    const section = (title, ...content) => {
+      const node = el("section");
+      node.append(el("h2", "", title), ...content);
+      return node;
+    };
+    $("help").replaceChildren(
+      section("States", states),
+      section("Rounds", el("p", "", "A round is one pass of build, gate, review: the implementer builds, a script runs the checks, a reviewer judges the rest. The line stops and asks you after the last round.")),
+      section("Pipeline", el("p", "", "One node per stage: intake, research, verification, build, review, done. Filled grey nodes are behind the ticket, the coloured node is where it is now, hollow nodes are ahead. A small dot means a standard ticket skips research.")),
+      section("Keys", keys)
+    );
+  }
+
+  // ---- Entry point
+
+  function hashTicketId() {
+    return decodeURIComponent(location.hash.slice(1));
+  }
+
+  // The page sets the hash with replaceState, which fires no hashchange, so this only runs for an outside change.
+  function followHash() {
+    const id = hashTicketId();
+    if (id && id !== view.openId) openTicket(id);
+    else if (!id && view.openId) closePane();
+  }
+
+  function main() {
+    const hash = hashTicketId();
+    // A reload reopens the ticket that was open. The pane draws once the first poll has the ticket.
+    if (hash) {
+      view.openId = hash;
+      view.cursorId = hash;
+    }
+    window.addEventListener("hashchange", followHash);
+    renderKeyBar();
+    renderHelp();
+    $("filter").addEventListener("input", (event) => {
+      view.filter = event.target.value;
+      renderList();
+    });
+    $("help-button").addEventListener("click", () => toggleHelp($("help").hidden));
+    document.addEventListener("keydown", onKey);
+    poll();
+    setInterval(poll, POLL_MS);
+  }
+
+  main();
+</script>
+</body>
+</html>

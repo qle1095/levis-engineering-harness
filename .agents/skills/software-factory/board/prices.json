@@ -1,0 +1,11 @@
+{
+  "note": "US dollars per million tokens, Anthropic API list prices, checked 2026-11-03. Edit when prices change. A model that is not listed shows on the board as having no price.",
+  "cache_write_5m_multiplier": 1.25,
+  "cache_write_1h_multiplier": 2.0,
+  "models": {
+    "claude-fable-5-2": { "input": 8.0, "output": 40.0, "cache_read": 0.2 },
+    "claude-opus-5-5": { "input": 4.0, "output": 20.0, "cache_read": 0.2 },
+    "claude-sonnet-5-5": { "input": 2.0, "output": 10.0, "cache_read": 0.1 },
+    "claude-haiku-5-5": { "input": 0.1, "output": 0.5, "cache_read": 0.01 }
+  }
+}
