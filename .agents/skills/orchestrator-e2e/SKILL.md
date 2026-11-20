@@ -1,6 +1,6 @@
 ---
 name: orchestrator-e2e
-description: Asks first, then runs planner / implementer / reviewer through to the end without stopping between phases, writes the run record, and keeps turns frozen. Use when Levi names or invokes orchestrator-e2e. Do not use unless named/invoked.
+description: Asks first, then runs planner / implementer / reviewer through to the end without stopping between phases. Use when Levi names or invokes orchestrator-e2e. Do not use unless named/invoked.
 disable-model-invocation: true
 ---
 
@@ -14,11 +14,11 @@ Your job is to:
 2. Ask the user before proceeding if anything is unclear. Do not assume.
 3. Spawn a dedicated sub-agent for each sub-problem. Choose the model that fits that job.
 4. Coordinate those sub-agents, routing feedback backward until the solution is **expertly done**.
-5. Report the result in chat (short) and keep one run record a human can scan.
+5. Report the result in chat (short).
 
 If you catch yourself about to edit files or write the implementation, stop. Spawn the right sub-agent instead.
 
-The only files you write are the run record (`docs/runs/…`) and that run's conversation artifacts beside it. That is reporting, not implementation. Stop and spawn if you are about to write anything else.
+You write no files. Stop and spawn if you are about to write one.
 
 ---
 
@@ -43,7 +43,7 @@ Keep questions short and specific. Ask only what you need to proceed.
 
 ## Runs through
 
-After a role returns, append its turn and write that role's conversation artifact, then spawn the next role. Do not stop between phases. The artifact is the conversation.
+After a role returns, spawn the next role. Do not stop between phases.
 
 ## Default pipeline
 
@@ -88,9 +88,7 @@ Rules for the loop:
 - Do not spawn a tester, and do not fail the loop for missing tests, when tests would not earn their keep.
 - The planner may revise the plan; the implementer then re-applies it.
 - Repeat until the **reviewer** accepts (and the **tester**, if one ran).
-- You (the orchestrator) synthesize status, decide who runs next, and stop only when that bar is met. You still do not implement product work. The run record is reporting. If the loop exposes an undecided product question, ask the user — do not assume.
-- After each spawned role **returns**, append one turn to the **same** run record. Do not rewrite the header, Intent, or an earlier turn. Mid-loop rejects stay as their own turns; later rework and accepts are later turns.
-- You write it. Sub-agents do not write or edit it. See **Run record**.
+- You (the orchestrator) synthesize status, decide who runs next, and stop only when that bar is met. You still do not implement product work. If the loop exposes an undecided product question, ask the user — do not assume.
 
 **Expertly done** means: fits the existing architecture, is correct, is elegant (not hacky), and is reviewed. Tests only when they earn their keep. "It compiles" or "first draft looks fine" is still not enough.
 
@@ -101,8 +99,6 @@ Elegance standards: `STANDARDS.md`. Implementer and reviewer must follow them vi
 ---
 
 ## Report back
-
-Chat stays short. The durable scan artifact is the run record — put that path in chat **Status**; do not paste the file into chat.
 
 When the loop is done, **you** (the orchestrator) report to the user. Sub-agents do the work; you explain it. Do not paste transcripts, raw diffs, or a play-by-play of each agent.
 
@@ -115,7 +111,7 @@ Include:
 | **What changed** | Concrete files, behaviors, or configs that changed. Name the important ones. Skip noise. |
 | **Why this approach** | One or two sentences: why it fits the existing architecture, and what constraint drove the choice. If the work was non-trivial, say why this was the elegant path (or that the obvious fix was enough). |
 | **What we did not do** | Rejected alternatives, only if they were real options. One line each. |
-| **Status** | Reviewed? Tests only if they earned their keep? Anything still open? Run record path. |
+| **Status** | Reviewed? Tests only if they earned their keep? Anything still open? |
 
 **Don't**
 
@@ -134,30 +130,13 @@ Example:
 > **What changed:** `services/web/Dockerfile` now uses the shared Node image, matching other UI services.
 > **Why:** Existing UI services already share that image; a one-off Dockerfile would drift.
 > **Not done:** A custom base image — rejected so scan and patch cadence stay consistent.
-> **Status:** Reviewed against current service images. Record: `docs/runs/YYYY-MM-DD-short-name.md`.
+> **Status:** Reviewed against current service images.
 
 ---
 
-## Run record
+## What each role returns
 
-One file per request. **You** write the whole file. Sub-agents never touch it. Chat **Report back** still applies; the file is the scan artifact.
-
-### When and where
-
-- Path: `docs/runs/YYYY-MM-DD-short-name.md` at the workspace root.
-- Date: calendar date when the file is first created. Do not rename if the loop crosses midnight.
-- short-name: kebab-case, a few words from the user request. You choose. No chat ids, no UUIDs.
-- Create when the first spawned role returns: header, Intent, and **Turn 1** in that first write.
-- After every later role, append `## Turn N — <Role>` to that same path.
-- With that turn, write the sub-agent conversation to `docs/runs/YYYY-MM-DD-short-name/turn-N-role.md`. The scan table stays the scan. The artifact is the conversation. See the run-record skill.
-- Do not pre-create empty turns. Only append a turn for a role that just returned.
-- A later user lock goes in the next turn, not an Intent edit.
-- Same request = same file.
-- If that path already belongs to a different request, add a distinguishing word or `-2`. Do not overwrite.
-- Create `docs/runs/` if missing. Do not add sample runs or a folder README.
-- Scope: this pipeline (planner, implementer, reviewer, tester if spawned, extra roles). Skip ask-only turns. Skip architecture-brainstorm. This skill is the pipeline — do not skip it.
-
-### Require this return from each spawn
+Require this from each spawn. It is what you route feedback with, and what you report from.
 
 | Role | Must return to the orchestrator |
 | --- | --- |
@@ -165,19 +144,6 @@ One file per request. **You** write the whole file. Sub-agents never touch it. C
 | Implementer | Changed (what and where), Why. |
 | Reviewer / tester | Verdict (Accept or Reject), Why. On reject: what must change (and who next if not obvious). |
 | Extra role | Same shape: found or changed, why; Verdict if they judged. |
-
-If a return is a dump, you condense it before writing the file. Sub-agents still must not create, edit, or append `docs/runs/*`.
-
-### Write so a human can scan
-
-- Read `.agents/skills/run-record/SKILL.md` before writing. That skill owns the look. Do not copy it here.
-- Forbidden: transcripts, raw diffs, play-by-play of how agents talked, secrets/PII (`STANDARDS.md`).
-- Header and Intent are written once. After that the file only grows.
-- Each spawn return is its own `## Turn N — <Role>` (N = 1, 2, 3… never reused).
-- Current state is the last turn (bottom of the file).
-- A later Accept does not erase a prior Reject.
-- **Not doing** lives on the turn that rejected the path.
-- After a turn is on disk, it is frozen. Do not go back to polish it.
 
 ---
 
@@ -224,4 +190,3 @@ Before you finish a turn on an implementation request:
 - [ ] The result was accepted only after it was expertly done.
 - [ ] Non-trivial work was checked for a more elegant path; hacky fixes were sent back. Simple obvious fixes were not over-engineered.
 - [ ] You reported what changed, why that approach, and status — short, precise, human-readable. No agent transcripts.
-- [ ] Run record created on first return (header + Intent + Turn 1), then one turn appended after each later role; prior turns not rewritten; chat report still short; using the `run-record` skill.

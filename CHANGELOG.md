@@ -12,6 +12,8 @@ STANDARDS name two more tests that prove nothing: one that works out its expecte
 
 Added `GLOSSARY.md` to the skill: one name for each thing on the line, with the words to avoid. "Vague task" is a research task; "specialist" is the verifier.
 
+Removed `run-record`. `orchestrator-e2e` no longer writes a run record or conversation artifacts under `docs/runs/`. It reports in chat, and it writes no files. It still requires the same return from each role.
+
 These ideas come from Matt Pocock's skills, `mattpocock/skills` (MIT): proof that a check goes red first, questions with a recommended answer, the retro, and the glossary format.
 
 ## 2026-11-18
