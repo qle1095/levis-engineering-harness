@@ -1,4 +1,4 @@
-"""Tests for the ticket rules, the gate, and the cost reader.
+"""Tests for the ticket rules, the red checks, the gate, and the cost reader.
 
 Run from this folder:  python3 -m unittest test_factory
 """
@@ -55,12 +55,30 @@ class FactoryCase(unittest.TestCase):
     def checks(self, ticket_id, script):
         (tickets.ticket_folder(ticket_id) / "checks.sh").write_text(script, encoding="utf-8")
 
+    def plan(self, ticket_id, red_first="None. The change is a rename, so nothing behaves differently."):
+        body = "\n## Summary\n- one thing\n"
+        if red_first:
+            body += "\n## Red first\n%s\n" % red_first
+        return self.put(ticket_id, "verification-plan.md", "VERIFICATION: READY", body)
+
+    def red_check(self, ticket_id, name, script):
+        return self.put(ticket_id, "checks/%s" % name, "# a probe the verifier wrote", script)
+
+    def start_build(self, ticket_id):
+        tickets.red(ticket_id)
+        return tickets.update_ticket(ticket_id, "Building.", stage="build")
+
     def to_build(self, ticket_id, script="exit 0\n"):
         """Take a standard ticket to the start of round 1."""
         tickets.update_ticket(ticket_id, "Verifying.", stage="verification")
-        self.put(ticket_id, "verification-plan.md", "VERIFICATION: READY")
+        self.plan(ticket_id)
         self.checks(ticket_id, script)
-        return tickets.update_ticket(ticket_id, "Building.", stage="build")
+        return self.start_build(ticket_id)
+
+    def red_refused(self, ticket_id):
+        with self.assertRaises(FactoryError) as caught:
+            tickets.red(ticket_id)
+        return str(caught.exception)
 
     def refused(self, *args, **kwargs):
         with self.assertRaises(FactoryError) as caught:
@@ -108,8 +126,8 @@ class Moves(FactoryCase):
         self.assertIn("It is missing", self.refused(ticket_id, "x", stage="build"))
         self.put(ticket_id, "verification-plan.md", "VERIFICATION: NEEDS-LEVI")
         self.assertIn("VERIFICATION: NEEDS-LEVI", self.refused(ticket_id, "x", stage="build"))
-        self.put(ticket_id, "verification-plan.md", "VERIFICATION: READY")
-        ticket = tickets.update_ticket(ticket_id, "Building.", stage="build")
+        self.plan(ticket_id)
+        ticket = self.start_build(ticket_id)
         self.assertEqual((ticket["stage"], ticket["rounds"]), ("build", 1))
         self.assertTrue((tickets.ticket_folder(ticket_id) / "round-1").is_dir())
 
@@ -161,6 +179,91 @@ class Moves(FactoryCase):
         ticket_id = self.open_ticket()
         self.assertEqual(tickets.update_ticket(ticket_id, "Asked Levi.", state="waiting")["state"], "waiting")
         self.assertEqual(tickets.update_ticket(ticket_id, "He answered.")["state"], "working")
+
+
+class RedFirst(FactoryCase):
+    """A red check must fail on the code as it is today, or it cannot tell broken from fixed."""
+
+    CALLS_IT = 'bash "$TICKET_FOLDER/checks/red-empty-cart.sh"\n'
+
+    def verifying(self, red_first=None):
+        ticket_id = self.open_ticket()
+        tickets.update_ticket(ticket_id, "Verifying.", stage="verification")
+        self.plan(ticket_id, red_first)
+        return ticket_id
+
+    def test_the_build_waits_until_the_checks_were_tried_on_todays_code(self):
+        ticket_id = self.verifying("None. A rename.")
+        self.assertIn("Run `red", self.refused(ticket_id, "x", stage="build"))
+
+    def test_a_red_check_that_fails_today_is_confirmed_and_the_build_starts(self):
+        ticket_id = self.verifying()
+        self.checks(ticket_id, self.CALLS_IT)
+        self.red_check(ticket_id, "red-empty-cart.sh", "echo checkout crashed in $(basename $PWD); exit 1\n")
+        verdict, _ = tickets.red(ticket_id)
+        self.assertEqual(verdict, "CONFIRMED")
+        report = (tickets.ticket_folder(ticket_id) / "red.md").read_text()
+        self.assertTrue(report.startswith("RED: CONFIRMED\n"))
+        self.assertIn("1 of 1 red checks failed", report)
+        self.assertIn("checkout crashed in target", report)
+        self.assertEqual(tickets.update_ticket(ticket_id, "Building.", stage="build")["stage"], "build")
+
+    def test_a_red_check_that_passes_today_stops_the_build_until_it_is_fixed(self):
+        ticket_id = self.verifying()
+        self.checks(ticket_id, self.CALLS_IT)
+        self.red_check(ticket_id, "red-empty-cart.sh", "exit 0\n")  # tests a cart with an item, so it sees no crash
+        verdict, ticket = tickets.red(ticket_id)
+        self.assertEqual((verdict, ticket["stage"]), ("NOT-RED", "verification"))
+        self.assertIn("cannot tell broken from fixed", self.refused(ticket_id, "x", stage="build"))
+        self.red_check(ticket_id, "red-empty-cart.sh", "exit 1\n")
+        self.assertIn("changed since", self.refused(ticket_id, "x", stage="build"))
+        self.assertEqual(tickets.red(ticket_id)[0], "CONFIRMED")
+        self.assertEqual(tickets.update_ticket(ticket_id, "Building.", stage="build")["stage"], "build")
+
+    def test_one_passing_red_check_among_failing_ones_is_not_red(self):
+        ticket_id = self.verifying()
+        self.checks(ticket_id, self.CALLS_IT + 'bash "$TICKET_FOLDER/checks/red-total.sh"\n')
+        self.red_check(ticket_id, "red-empty-cart.sh", "exit 1\n")
+        self.red_check(ticket_id, "red-total.sh", "exit 0\n")
+        self.assertEqual(tickets.red(ticket_id)[0], "NOT-RED")
+        report = (tickets.ticket_folder(ticket_id) / "red.md").read_text()
+        self.assertIn("1 of 2 red checks failed", report)
+        self.assertIn("| `checks/red-total.sh` | passed", report)
+
+    def test_a_red_check_that_never_finishes_proves_nothing(self):
+        ticket_id = self.verifying()
+        self.checks(ticket_id, self.CALLS_IT)
+        self.red_check(ticket_id, "red-empty-cart.sh", "sleep 30\n")
+        self.assertEqual(tickets.red(ticket_id, timeout=1)[0], "NOT-RED")
+
+    def test_checks_changed_after_they_were_confirmed_must_be_confirmed_again(self):
+        ticket_id = self.verifying()
+        self.checks(ticket_id, self.CALLS_IT)
+        self.red_check(ticket_id, "red-empty-cart.sh", "exit 1\n")
+        tickets.red(ticket_id)
+        self.red_check(ticket_id, "red-empty-cart.sh", "exit 2\n")
+        self.assertIn("changed since", self.refused(ticket_id, "x", stage="build"))
+
+    def test_a_red_check_the_gate_would_never_run_is_refused(self):
+        ticket_id = self.verifying()
+        self.checks(ticket_id, "exit 0\n")
+        self.red_check(ticket_id, "red-empty-cart.sh", "exit 1\n")
+        self.assertIn("checks.sh does not call red-empty-cart.sh", self.red_refused(ticket_id))
+
+    def test_a_plan_with_no_red_check_must_say_why(self):
+        ticket_id = self.verifying()
+        self.assertIn("does not say why", self.red_refused(ticket_id))
+        self.plan(ticket_id, "None. Docs only, nothing runs.")
+        self.assertEqual(tickets.red(ticket_id)[0], "NONE")
+        self.assertIn("Docs only", (tickets.ticket_folder(ticket_id) / "red.md").read_text())
+        self.assertEqual(tickets.update_ticket(ticket_id, "Building.", stage="build")["stage"], "build")
+
+    def test_red_checks_cannot_be_tried_once_a_build_has_started(self):
+        ticket_id = self.open_ticket()
+        self.to_build(ticket_id)
+        self.assertIn("before the first build", self.red_refused(ticket_id))
+        tickets.update_ticket(ticket_id, "The check was wrong.", stage="verification")
+        self.assertIn("before the first build", self.red_refused(ticket_id))
 
 
 class TheGate(FactoryCase):
@@ -221,10 +324,10 @@ class TheGate(FactoryCase):
     def test_a_helper_script_the_checks_call_is_locked_too(self):
         ticket_id = self.open_ticket()
         tickets.update_ticket(ticket_id, "Verifying.", stage="verification")
-        self.put(ticket_id, "verification-plan.md", "VERIFICATION: READY")
+        self.plan(ticket_id)
         self.checks(ticket_id, "python3 \"$TICKET_FOLDER/checks/probe.py\"\n")
         probe = self.put(ticket_id, "checks/probe.py", "import sys", "sys.exit(1)\n")
-        tickets.update_ticket(ticket_id, "Building.", stage="build")
+        self.start_build(ticket_id)
         self.put(ticket_id, "round-1/build.md", "BUILD: READY")
         probe.write_text("import sys\nsys.exit(0)\n")  # the probe an implementer made pass
         with self.assertRaises(FactoryError) as caught:
@@ -236,7 +339,7 @@ class TheGate(FactoryCase):
             tickets.gate(ticket_id)
         self.assertIn("checks/extra.py changed", str(caught.exception))
 
-    def test_the_specialist_can_change_the_checks_by_going_back_through_verification(self):
+    def test_the_verifier_can_change_the_checks_by_going_back_through_verification(self):
         ticket_id = self.open_ticket()
         self.to_build(ticket_id, "exit 1\n")
         tickets.update_ticket(ticket_id, "The check was wrong.", stage="verification")
@@ -248,8 +351,8 @@ class TheGate(FactoryCase):
     def test_a_plan_with_no_automated_checks_passes_with_nothing_run(self):
         ticket_id = self.open_ticket()
         tickets.update_ticket(ticket_id, "Verifying.", stage="verification")
-        self.put(ticket_id, "verification-plan.md", "VERIFICATION: READY")
-        tickets.update_ticket(ticket_id, "Building.", stage="build")
+        self.plan(ticket_id)
+        self.start_build(ticket_id)
         self.put(ticket_id, "round-1/build.md", "BUILD: READY")
         passed, _ = tickets.gate(ticket_id)
         self.assertTrue(passed)
@@ -276,7 +379,8 @@ class FilesInTheFolder(FactoryCase):
         listed = [(f["path"], f["first_line"]) for f in tickets.list_files(ticket_id)]
         self.assertEqual(
             [path for path, _ in listed],
-            ["request.md", "scout-cart.md", "verification-plan.md", "checks.sh", "round-1/build.md", "round-1/gate.md", "round-1/gate.log"],
+            ["request.md", "scout-cart.md", "verification-plan.md", "checks.sh", "red.md", "red.log",
+             "round-1/build.md", "round-1/gate.md", "round-1/gate.log"],
         )
         self.assertIn(("round-1/gate.md", "GATE: PASS"), listed)
 
@@ -333,8 +437,8 @@ class SolutionTickets(FactoryCase):
         self.assertIn("solution tickets", self.refused(parent, "x", stage="done"))
         self.put(child, "plan.md", "PLAN: READY")
         tickets.update_ticket(child, "Planned.", stage="verification")
-        self.put(child, "verification-plan.md", "VERIFICATION: READY")
-        tickets.update_ticket(child, "Building.", stage="build")
+        self.plan(child)
+        self.start_build(child)
         self.put(child, "round-1/build.md", "BUILD: READY")
         tickets.gate(child)
         self.put(child, "round-1/review.md", "REVIEW: ACCEPT")

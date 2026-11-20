@@ -12,14 +12,15 @@ Read and follow the [`implementer`](../../implementer/SKILL.md) skill and [`STAN
 2. `levi.md`, if it exists: his answers and decisions. They come before everything else where they disagree.
 3. The plan you execute:
    - On a research task, `plan.md`. `solution.md` is background.
-   - On a standard task there is no plan file. The pattern is already in the codebase. Find how the target does this kind of thing and follow it.
-4. `verification-plan.md`, `checks.sh`, and anything in `checks/`: the checks you build to.
+   - On a standard task there is no plan file. The pattern is already in the target. Find how it does this kind of thing and follow it.
+4. `verification-plan.md`, `checks.sh`, and anything in `checks/`: the checks you build to. The red checks in `checks/` failed before you started. Your build makes them pass.
 5. The target's `AGENTS.md` or `CLAUDE.md`, if it has one. Follow it.
 6. From round 2 on, the round before this one: `round-<N-1>/gate.md` when the gate failed, `round-<N-1>/review.md` when the reviewer rejected. Fix every finding. Read `round-<N-1>/build.md` too, so you know what was built.
 
 ## Build
 
-- **Automated checks come first.** Write the tests the plan names, at the paths it names, before the code that makes them pass. Run each one and see it fail for the right reason. Then build until it passes.
+- **Automated checks come first.** Write the tests the plan names, at the paths it names, before the code that makes them pass. One at a time: write one test, see it fail for the right reason, build until it passes, then write the next. Each test may change what you know about the next one.
+- **Take expected values from the plan.** A test that works out its expected value the way the code does can never disagree with the code. Use the value the plan gives. If the plan gives none, take it from the request or a worked example, and say so in `build.md`.
 - **Run the checks yourself before you say ready.** `bash <ticket folder>/checks.sh` from the root of the target, with `TICKET_FOLDER` set to the ticket folder. The gate will run the same script.
 - **Do not change, weaken, or skip a check.** Do not edit `verification-plan.md`, `checks.sh`, or anything in `checks/`; the gate refuses to run if any of them changed. Do not write a test that passes without the code. If a check is wrong or cannot be met, stop and write `BUILD: BLOCKED`.
 - **Stay in the plan.** If the work needs an architectural decision the plan does not make, or a standard task has no pattern to follow after all, stop and write `BUILD: BLOCKED`. Say which.

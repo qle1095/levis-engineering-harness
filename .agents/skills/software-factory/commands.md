@@ -2,7 +2,7 @@
 
 `factory.py` is in the `board` folder beside this file. It needs Python 3 and nothing else. The commands below use `<board>` for that folder's path.
 
-It does four jobs: it keeps each ticket's state, it refuses a move the line does not allow, it runs the gate, and it serves the live board.
+It does five jobs: it keeps each ticket's state, it refuses a move the line does not allow, it runs the red checks, it runs the gate, and it serves the live board.
 
 ## Start the board
 
@@ -59,7 +59,7 @@ python3 <board>/factory.py update <id> --note "what just happened and what happe
 | intake | verification | `--kind standard` |
 | research | verification | `plan.md` starts with `PLAN: READY` |
 | research | done | The ticket has solution tickets, and each one is done |
-| verification | build | `verification-plan.md` starts with `VERIFICATION: READY`. The plan, `checks.sh`, and `checks/` are locked from here |
+| verification | build | `verification-plan.md` starts with `VERIFICATION: READY`. Before the first build, `red` has run on the checks as they are now and did not print `NOT-RED`. The plan, `checks.sh`, and `checks/` are locked from here |
 | build | review | Only the gate does this. `--stage review` is refused |
 | review | build | This round's `review.md` starts with `REVIEW: REJECT`. Starts the next round |
 | review | done | This round's `review.md` starts with `REVIEW: ACCEPT` |
@@ -79,6 +79,25 @@ LEVI
 ```
 
 It appends to `levi.md` in the ticket folder. Every role reads that file. Save his words before the next spawn, and do not tidy them.
+
+## Run the red checks
+
+When the verifier replies `VERIFICATION: READY`, before the first build:
+
+```bash
+python3 <board>/factory.py red <id>
+```
+
+It runs each `checks/red-*.sh` with `bash`, from the root of the ticket's target, on the code as it is today. Each one must fail.
+
+- **`RED: CONFIRMED`**: every red check failed. The move to build is now allowed.
+- **`RED: NONE`**: the plan has no red check and gives the reason under `## Red first`. The move to build is allowed.
+- **`RED: NOT-RED`**: a red check passed, or never finished. The move to build stays refused. Only the verifier fixes a check.
+- It writes `red.md` with one row per red check and the last lines of output, and `red.log` with all of it.
+- It refuses a red check that `checks.sh` does not call, and a plan with no red check and no reason.
+- If the plan or the checks change afterwards, run it again. The script refuses the build until it has.
+- It runs only before the first build. Once a build has started the code is no longer broken, so there is nothing to try a red check against.
+- A red check that runs longer than thirty minutes is stopped and counts as not red. `--timeout <seconds>` changes that.
 
 ## Run the gate
 
@@ -124,6 +143,8 @@ Each ticket has its own folder, `~/.software-factory/tickets/<id>/`, outside the
 | `verification-plan.md` | verifier | The checks. Locked when the build starts |
 | `checks.sh` | verifier | The script the gate runs. Locked when the build starts |
 | `checks/*` | verifier | Helper scripts `checks.sh` calls: a probe, a measuring script. Locked when the build starts |
+| `checks/red-*.sh` | verifier | The red checks: probes that must fail before the build and pass at the gate |
+| `red.md`, `red.log` | the script, at `red` | What each red check did before the build |
 | `round-<N>/build.md` | implementer | What was built in round N |
 | `round-<N>/gate.md`, `gate.log` | the script, at `gate` | The checks' result and output |
 | `round-<N>/review.md` | reviewer | The verdict and the findings |

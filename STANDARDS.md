@@ -69,8 +69,10 @@ Match existing style, even if you would write it differently.
 - **Skip:** Docs-only, policy, obvious one-liners, or a test that would just restate the change. A missing test is not a defect in those cases.
 - **If warranted:** Happy path and relevant edges. Compiling / green CI is not enough.
 - **Observes behavior:** A test that would still pass if every function it calls returned no result observes nothing. Asserting that a call returns empty, zero, or nil only proves the call is allowed — when the requirement is that it must be impossible or must fail, assert that instead. Rewrite it to assert a real output, or delete it.
+- **Independent answer:** A test that works out its expected value the way the code does can never disagree with the code. Take the expected value from the requirement, a worked example, or a known-good number.
+- **From outside:** Test behavior through the interface a caller uses. A test that mocks the code's own parts, or reaches into private functions, breaks on a rewrite that changes nothing and can pass while the real path is broken.
 - **Existing tests:** Update ones that still earn their keep. Do not delete them only to make CI green. Do not add tests that do not earn their keep.
-- **Fit:** Use the project's existing layout and runner when you do write tests. This repo does not prescribe a framework. This harness has no test suite.
+- **Fit:** Use the project's existing layout and runner when you do write tests. This repo does not prescribe a framework. This harness has one test file, for the software factory script.
 
 ## Review gates
 

@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-19
+
+`software-factory` now proves its checks before anyone builds. The verifier writes red checks, `checks/red-*.sh`: probes that must fail on the code as it is today and pass after the build. A new command, `factory.py red <id>`, runs them and writes `red.md`. The script refuses the first build until every red check has failed, or the verification plan says under `## Red first` why nothing can fail first. A check that passes before the work cannot tell broken from fixed.
+
+Every question to Levi now carries a recommended answer, worded so "yes" accepts it. The rules are in one place, **Asking Levi** in the skill.
+
+The reviewer lists, under `## For next time`, each mistake a script or a one-line rule could catch before it reaches a reviewer again. The report offers it to Levi as its own ticket.
+
+STANDARDS name two more tests that prove nothing: one that works out its expected value the way the code does, and one that tests the code's insides instead of its behavior. The implementer now writes one test at a time.
+
+Added `GLOSSARY.md` to the skill: one name for each thing on the line, with the words to avoid. "Vague task" is a research task; "specialist" is the verifier.
+
+These ideas come from Matt Pocock's skills, `mattpocock/skills` (MIT): proof that a check goes red first, questions with a recommended answer, the retro, and the glossary format.
+
 ## 2026-11-18
 
 `software-factory` is rebuilt. It no longer writes `AGENTS.md` files; init, crawl, improve, and explain are gone. A pasted task now runs through a line: intake, research, verification design, an implementer / gate / reviewer loop, and a TLDR report. The main chat is the orchestrator and spawns Opus sub-agents for all the work.

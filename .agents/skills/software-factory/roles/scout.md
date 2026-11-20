@@ -15,7 +15,7 @@ Your brief gives the ticket folder, the target, and a **Task**: the question to 
 
 Answer the question in your Task. Say what the code does, with `path:line` for each fact. Say what you did not find. Do not recommend a solution unless the question asks for one. Do not guess where you did not look.
 
-A common question is whether a good pattern already exists for the request. A pattern exists when the codebase already does this kind of thing and the request can follow it with no architectural decision. Name the file that shows the pattern.
+A common question is whether a good pattern already exists for the request. A pattern exists when the target already does this kind of thing and the request can follow it with no architectural decision. Name the file that shows the pattern.
 
 ## Write
 

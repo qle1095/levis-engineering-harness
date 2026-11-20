@@ -6,13 +6,9 @@ Move the ticket to research with `--kind research`. Every step below hands off t
 
 ## 1. Ask Levi first
 
-Ask the questions whose answers change the solution: the goal and its number, the constraints, what is off limits. Ask as many as the problem needs. Short and specific.
+Ask the questions whose answers change the solution: the goal and its number, the constraints, what is off limits. Ask as many as the problem needs.
 
-Ask only what the code cannot tell you. If a question is about the code — where the cost is, how a path works today — spawn a [scout](roles/scout.md) with that question. Then ask Levi the rest.
-
-Ask and stop. Mark the ticket as waiting.
-
-When he answers, save his words with `factory.py levi` before anything else.
+Follow **Asking Levi** in [SKILL.md](SKILL.md). A question about the code — where the cost is, how a path works today — goes to a [scout](roles/scout.md) first. Its answer often gives you the recommendation for a question you then ask Levi.
 
 ## 2. Spawn the researcher
 
@@ -63,8 +59,8 @@ Build each one and measure.
 
 1. Open one ticket for each solution with `factory.py new --parent <this ticket> --title "<request>: <solution>"`. Give each its own git worktree of the target as `--target`. Two implementers never share a working tree. A solution ticket starts in research with this ticket's request, Levi's words, and `solution.md`.
 2. For each solution ticket, spawn the researcher with Task `plan`. The Task names which solution that ticket builds.
-3. Spawn one verifier for all of them. Its Task lists every solution ticket's folder. It writes the same `verification-plan.md` and `checks.sh` into each. The plan includes the measure that decides the winner, and the baseline taken before any build.
-4. Run each solution ticket through the build loop, with its own implementer and its own reviewer. Leave each worktree uncommitted.
+3. Spawn one verifier for all of them. Its Task lists every solution ticket's folder. It writes the same `verification-plan.md`, `checks.sh`, and `checks/` into each. The plan includes the measure that decides the winner, and the baseline taken before any build.
+4. Run `factory.py red` on each solution ticket, then run each through the build loop, with its own implementer and its own reviewer. Leave each worktree uncommitted.
 5. This ticket stays in research and waits. Say on the board which tickets it waits for.
 
 When every solution ticket is done, read each one's last `gate.md` and `review.md` summaries. Present the results in one table with the measured numbers. Levi picks the winner. Save his words.

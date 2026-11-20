@@ -1,4 +1,4 @@
-"""Tickets: one folder each, the moves the line allows, and the gate.
+"""Tickets: one folder each, the moves the line allows, the red checks, and the gate.
 
 Sub-agents write their results into the ticket folder as files. This module is
 the only writer of ticket.json. It refuses a move the line does not allow, so
@@ -40,9 +40,13 @@ GATE_TAIL_LINES = 60
 # They are hashed when the build starts. The gate refuses to run if any changed, appeared, or went missing since.
 LOCKED_FILES = ("verification-plan.md", "checks.sh")
 CHECKS_FOLDER = "checks"
+# A red check is a script in checks/ that must fail before the build and pass after it.
+# It proves the check can tell broken from fixed. The plan says why under this heading when it has none.
+RED_CHECKS = "red-*.sh"
+RED_SECTION = "red first"
 # Files a parent ticket hands to a ticket opened to build one of its solutions.
 INHERITED_FILES = ("request.md", "levi.md", "solution.md")
-TOP_FILE_ORDER = ("request.md", "levi.md", "solution.md", "plan.md", "verification-plan.md", "checks.sh")
+TOP_FILE_ORDER = ("request.md", "levi.md", "solution.md", "plan.md", "verification-plan.md", "checks.sh", "red.md", "red.log")
 ROUND_FILE_ORDER = ("build.md", "gate.md", "gate.log", "review.md")
 SLUG_LENGTH = 40
 TICKET_ID = re.compile(r"^[a-z0-9][a-z0-9-]*$")
@@ -174,21 +178,26 @@ def round_folder(ticket, number=None):
     return ticket_folder(ticket["id"]) / ("round-%d" % (ticket["rounds"] if number is None else number))
 
 
-def summary_of(path):
-    """The bullets under `## Summary`, which every sub-agent file carries for the human and the orchestrator."""
+def section_of(path, heading):
+    """The lines under `## <heading>` in a sub-agent's file, without the blank ones."""
     try:
         lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
     except OSError:
         return []
-    bullets, inside = [], False
+    found, inside = [], False
     for line in lines:
         if line.startswith("## "):
             if inside:
                 break
-            inside = line.strip().lower() == "## summary"
+            inside = line.strip().lower() == "## " + heading
         elif inside and line.strip():
-            bullets.append(line.strip())
-    return bullets[:SUMMARY_LINES_SHOWN]
+            found.append(line.strip())
+    return found
+
+
+def summary_of(path):
+    """The bullets under `## Summary`, which every sub-agent file carries for the human and the orchestrator."""
+    return section_of(path, "summary")[:SUMMARY_LINES_SHOWN]
 
 
 def file_rank(name, order):
@@ -378,6 +387,8 @@ def check_move(ticket, stage):
             raise FactoryError("refused: a ticket leaves research as done only when it has solution tickets and each one is done.")
     if current == "verification" and stage == "build":
         require_first_line(folder / "verification-plan.md", "VERIFICATION: READY", "The build needs the verification plan first.")
+        if not ticket["rounds"]:
+            require_red(ticket)
     if current == "review" and stage == "build":
         require_first_line(round_folder(ticket) / "review.md", "REVIEW: REJECT", "A ticket returns to build when the reviewer rejects.")
     if current == "review" and stage == "done":
@@ -400,6 +411,19 @@ def verifier_files(ticket_id):
         if path.is_file():
             hashes[str(path.relative_to(folder))] = file_hash(path)
     return hashes
+
+
+def require_red(ticket):
+    """Raise unless the red checks were confirmed on the verifier's files as they are now."""
+    red = ticket.get("red") or {}
+    if red.get("files") != verifier_files(ticket["id"]):
+        why = "changed since the red checks ran" if red else "not been tried against the code as it is today"
+        raise FactoryError("refused: the checks have %s. Run `red %s` before the first build." % (why, ticket["id"]))
+    if red.get("verdict") == "NOT-RED":
+        raise FactoryError(
+            "refused: a red check passes before the build, so it cannot tell broken from fixed: see red.md. "
+            "The verifier fixes the check, then run `red %s` again." % ticket["id"]
+        )
 
 
 def start_round(ticket):
@@ -452,6 +476,114 @@ def save_usage(ticket_id, usage):
         ticket = read_ticket(ticket_id)
         ticket["usage"] = usage
         write_ticket(ticket)
+
+
+# ---- Red first --------------------------------------------------------------
+
+
+def red_checks(ticket_id):
+    return sorted((ticket_folder(ticket_id) / CHECKS_FOLDER).glob(RED_CHECKS))
+
+
+def run_red_checks(ticket, checks, timeout):
+    """Run each red check in the target. Returns (path in the ticket folder, exit code) pairs. None means it never finished."""
+    folder = ticket_folder(ticket["id"])
+    env = dict(os.environ, TICKET_FOLDER=str(folder), ROUND="0")
+    results = []
+    with (folder / "red.log").open("w", encoding="utf-8") as out:
+        for check in checks:
+            name = str(check.relative_to(folder))
+            out.write("== %s\n" % name)
+            out.flush()
+            try:
+                code = subprocess.run(
+                    ["bash", str(check)], cwd=ticket["target"], env=env, stdout=out, stderr=subprocess.STDOUT, timeout=timeout
+                ).returncode
+            except subprocess.TimeoutExpired:
+                code = None
+            results.append((name, code))
+    return results
+
+
+def red_outcome(code, timeout):
+    if code is None:
+        return "did not finish in %d seconds, so it proves nothing" % timeout
+    if code == 0:
+        return "passed. It cannot tell broken from fixed"
+    return "failed (exit %d), as it must" % code
+
+
+def write_red_report(ticket, verdict, results, reason, timeout):
+    folder = ticket_folder(ticket["id"])
+    if verdict == "NONE":
+        (folder / "red.log").write_text("", encoding="utf-8")
+        summary = ["- The plan has no red checks, so nothing was run", "- The verifier's reason: %s" % " ".join(reason)]
+        detail = []
+    else:
+        failed = sum(1 for _, code in results if code)
+        tail = (folder / "red.log").read_text(encoding="utf-8", errors="replace").splitlines()[-GATE_TAIL_LINES:]
+        summary = [
+            "- %d of %d red checks failed before the build. Every one must" % (failed, len(results)),
+            "- Run in %s, on the code as it is before the build" % ticket["target"],
+            "- Full output: red.log, beside this file",
+        ]
+        rows = ["| `%s` | %s |" % (name, red_outcome(code, timeout)) for name, code in results]
+        detail = ["", "## Red checks", "", "| Red check | Before the build |", "| --- | --- |"] + rows
+        detail += ["", "## Last lines of the output", "", "```"] + tail + ["```"]
+    report = ["RED: %s" % verdict, "", "## Summary"] + summary + detail + [""]
+    (folder / "red.md").write_text("\n".join(report), encoding="utf-8")
+
+
+def red(ticket_id, timeout=GATE_TIMEOUT_SECONDS):
+    """Before the first build, run each red check and confirm it fails. Returns (verdict, ticket)."""
+    with ticket_lock(ticket_id):
+        ticket = read_ticket(ticket_id)
+        folder = ticket_folder(ticket_id)
+        if ticket["stage"] != "verification" or ticket["rounds"]:
+            raise FactoryError(
+                "refused: red checks run in verification, before the first build. This ticket is in %s, round %d. "
+                "Once a build has started the code is no longer broken, so they cannot be tried."
+                % (ticket["stage"], ticket["rounds"])
+            )
+        plan = folder / "verification-plan.md"
+        require_first_line(plan, "VERIFICATION: READY", "Red checks run on a finished plan.")
+        checks, files, reason = red_checks(ticket_id), verifier_files(ticket_id), section_of(plan, RED_SECTION)
+        if checks:
+            if not ticket.get("target") or not Path(ticket["target"]).is_dir():
+                raise FactoryError("refused: the ticket's target is not a folder: %r. Set it with --target." % ticket.get("target"))
+            script = folder / "checks.sh"
+            wired = script.read_text(encoding="utf-8", errors="replace") if script.is_file() else ""
+            unwired = [check.name for check in checks if check.name not in wired]
+            if unwired:
+                raise FactoryError(
+                    "refused: checks.sh does not call %s. A red check must fail before the build and pass at the gate, "
+                    "so checks.sh has to run it." % ", ".join(unwired)
+                )
+        elif not reason:
+            raise FactoryError(
+                "refused: the plan has no red check and does not say why. The verifier adds a red check in checks/, "
+                "or gives the reason under `## Red first` in the plan."
+            )
+
+    # The checks can run for minutes. The lock is not held, so progress notes still land.
+    results = run_red_checks(ticket, checks, timeout) if checks else []
+    verdict = "NONE" if not checks else ("CONFIRMED" if all(code for _, code in results) else "NOT-RED")
+
+    with ticket_lock(ticket_id):
+        ticket = read_ticket(ticket_id)
+        if ticket["stage"] != "verification" or ticket["rounds"] or verifier_files(ticket_id) != files:
+            raise FactoryError("the ticket or its checks changed while the red checks ran. Their result was not recorded.")
+        write_red_report(ticket, verdict, results, reason, timeout)
+        ticket["red"] = {"verdict": verdict, "files": files}
+        ticket["state"] = "working"
+        note = {
+            "CONFIRMED": "Red checks confirmed: %d failed before the build, as they must. The build is next." % len(results),
+            "NOT-RED": "A red check did not fail before the build: see red.md. Back to the verifier.",
+            "NONE": "The plan has no red checks and says why. The build is next.",
+        }[verdict]
+        append_update(ticket, note)
+        write_ticket(ticket)
+    return verdict, ticket
 
 
 # ---- The gate ---------------------------------------------------------------

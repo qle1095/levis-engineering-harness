@@ -53,7 +53,7 @@ Yes, and why. Or no: which solutions must be built and measured to know, and wha
 ...
 ```
 
-When only Levi can answer something first, the file starts with `RESEARCH: NEEDS-LEVI`, and the summary is the questions, each answerable in a line.
+When only Levi can answer something first, the file starts with `RESEARCH: NEEDS-LEVI`, and the summary is the questions. Each is answerable in a line and carries the answer you recommend.
 
 ## Task: plan
 
@@ -78,7 +78,7 @@ Each decision you made that Levi did not, and why. One line each.
 What can go wrong with this solution. The verifier turns these into checks.
 ```
 
-If the plan needs a decision that changes what Levi chose, the file starts with `PLAN: NEEDS-LEVI`, and the summary is the question.
+If the plan needs a decision that changes what Levi chose, the file starts with `PLAN: NEEDS-LEVI`, and the summary is the question, with the answer you recommend.
 
 ## Reply
 
