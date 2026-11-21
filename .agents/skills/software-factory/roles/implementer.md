@@ -20,6 +20,7 @@ Read and follow the [`implementer`](../../implementer/SKILL.md) skill and [`STAN
 ## Build
 
 - **Automated checks come first.** Write the tests the plan names, at the paths it names, before the code that makes them pass. One at a time: write one test, see it fail for the right reason, build until it passes, then write the next. Each test may change what you know about the next one.
+- **Write the tests the plan names and no others.** A test added so that a test exists is a defect: see **Never to have a test** in `STANDARDS.md`. If you find a way the change can go wrong that the plan missed, say so in your return; do not pad the suite.
 - **Take expected values from the plan.** A test that works out its expected value the way the code does can never disagree with the code. Use the value the plan gives. If the plan gives none, take it from the request or a worked example, and say so in `build.md`.
 - **Run the checks yourself before you say ready.** `bash <ticket folder>/checks.sh` from the root of the target, with `TICKET_FOLDER` set to the ticket folder. The gate will run the same script.
 - **Do not change, weaken, or skip a check.** Do not edit `verification-plan.md`, `checks.sh`, or anything in `checks/`; the gate refuses to run if any of them changed. Do not write a test that passes without the code. If a check is wrong or cannot be met, stop and write `BUILD: BLOCKED`.

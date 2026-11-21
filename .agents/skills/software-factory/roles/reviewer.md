@@ -28,7 +28,8 @@ You change nothing in the target.
 - **The checks are real.** Each test the plan names exists at its path and tests what the plan says. No test was weakened, skipped, or special-cased to pass. Each of these is a finding, as **Test when it earns its keep** in `STANDARDS.md` says:
   - a test that would still pass if the code did nothing;
   - a test whose expected value is worked out the way the code works it out, so the two can never disagree;
-  - a test that mocks the code's own parts or reaches into private functions, when the plan named the check at the outside.
+  - a test that mocks the code's own parts or reaches into private functions, when the plan named the check at the outside;
+  - a test written so that a test exists: no real bug would make it fail. The kinds are listed under **Never to have a test**. A test the plan did not name needs the same reason as one it did.
 - **Red first held.** Each red check in `red.md` failed before the build because of the problem, not because of a typo or a missing tool: read `red.log`. If the plan has no red check, its reason under `## Red first` is true for this change. A red check the verifier changed after the build started was never tried by the script: judge by reading it that it would have failed on the old code.
 - **The checks the plan gives to you.** Each check marked `reviewer` in the plan: run the feature and look, or read the change, as the plan says. Report what you saw.
 - **The request.** The change does what Levi asked, as `request.md` and `levi.md` say it. On a research task, it follows `plan.md`.

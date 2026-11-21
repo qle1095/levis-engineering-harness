@@ -28,7 +28,7 @@ You do not write product code.
    - An eval with a number, when the goal is a number such as cost, speed, or quality. Take the baseline before the build. Name the target.
    - Running the feature and looking, when nothing else can observe it.
    - Reading the change, for docs and policy.
-3. **Make every check able to fail.** A check that would still pass if the code did nothing checks nothing. Prove yours can fail with a red check: see **Write red checks**.
+3. **Make every check able to fail.** A check that would still pass if the code did nothing checks nothing. Name no test just so that a test exists: each one answers a way the change can go wrong from step 1. A change with one way to go wrong gets one test. Prove yours can fail with a red check: see **Write red checks**.
 4. **Check the behavior, from outside.** Name each test at the interface a caller uses, not at an inner function, so it survives a rewrite. Take each expected value from the request, a worked example, or a known-good number, and write that value in the plan. Do not leave the implementer to work it out from the code.
 5. **Protect what already works.** Name the existing tests that must stay green, and any behavior near the change that has no test and needs one.
 6. **Fit the target.** Use the target's test layout and runner. Do not bring a new framework to make a check easier to write. Expect what the target already does, such as its existing error shape.

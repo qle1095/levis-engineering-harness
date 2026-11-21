@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-21
+
+STANDARDS now say a test written so that a test exists is a defect, and list the kinds: a constant compared with itself, a test of the test's own cases or fakes, a mock echo, a count with no rule, matching a source file's current text, and the rest. Filler is deleted when found. In `software-factory` the verifier names no test without a way the change can go wrong, the implementer writes the plan's tests and no others, and the reviewer treats a filler test as a finding.
+
 ## 2026-11-19
 
 `software-factory` now proves its checks before anyone builds. The verifier writes red checks, `checks/red-*.sh`: probes that must fail on the code as it is today and pass after the build. A new command, `factory.py red <id>`, runs them and writes `red.md`. The script refuses the first build until every red check has failed, or the verification plan says under `## Red first` why nothing can fail first. A check that passes before the work cannot tell broken from fixed.
