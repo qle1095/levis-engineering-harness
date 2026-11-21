@@ -65,7 +65,7 @@ For an eval: the number today, and how it was measured. Leave the section out if
 Anything that could go wrong and has no check, and why. "Nothing" if nothing.
 ```
 
-**Run by** is `gate` for a check a script can run, `reviewer` for a check a person has to run or read, and `CI` for a browser test, which runs only in the target's CI. Give each test the implementer must write a name and a path, so `checks.sh` can call it before it exists.
+**Run by** is `gate` for a check a script can run, and `reviewer` for a check a person has to run or read. Give each test the implementer must write a name and a path, so `checks.sh` can call it before it exists.
 
 When you need Levi first, the file starts with `VERIFICATION: NEEDS-LEVI`, and the summary is the question, with the answer you recommend.
 
@@ -78,7 +78,7 @@ In the ticket folder, when the plan has at least one check run by the gate. When
 - Run all of them, then exit non-zero if any failed. The implementer needs the whole list, not the first failure.
 - It names tests that do not exist yet. They fail until the implementer writes them. That is correct, and it is why such a test is not a red check.
 - Do not change the target's code from the script.
-- No browser tests (Playwright, Cypress, anything that starts a server and drives a browser) in `checks.sh` or a red check. Levi leaves them to CI. A check that only a browser can prove is `Run by: CI` in the plan, and the report says it was not run here.
+- No browser tests (Playwright, Cypress, anything that starts a server and drives a browser) in `checks.sh` or a red check. Levi turned them off: they take too long. A check that only a browser can prove is `Run by: reviewer` in the plan, and the report says it was not run by a script.
 
 ## Write red checks
 
